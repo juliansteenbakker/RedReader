@@ -23,7 +23,7 @@ jobs:
                 run: ./gradlew assembleDebug
 
             -   name: Upload artifact to GitHub
-                uses: actions/upload-artifact@v2
+                uses: actions/upload-artifact@v3
                 with:
                     name: RedReader-debug.apk
                     path: build/outputs/apk/debug/RedReader-debug.apk
