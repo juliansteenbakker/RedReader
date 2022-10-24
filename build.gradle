@@ -40,7 +40,7 @@ dependencies {
 	implementation 'info.guardianproject.netcipher:netcipher:2.1.0'
 	implementation 'com.google.android.exoplayer:exoplayer-core:2.17.1'
 	implementation 'com.google.android.exoplayer:exoplayer-ui:2.17.1'
-	implementation 'com.github.luben:zstd-jni:1.5.2-2@aar'
+	implementation 'com.github.luben:zstd-jni:1.5.2-5@aar'
 
 	implementation 'androidx.wear:wear:1.2.0'
 	implementation 'com.google.android.support:wearable:2.9.0'
