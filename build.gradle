@@ -52,7 +52,7 @@ dependencies {
     androidTestImplementation 'androidx.test:rules:1.4.0'
     androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.4.0'
 
-	implementation platform('com.google.firebase:firebase-bom:31.0.2')
+	implementation platform('com.google.firebase:firebase-bom:31.1.1')
 	implementation 'com.google.firebase:firebase-analytics'
 	implementation 'com.google.firebase:firebase-crashlytics'
 }
