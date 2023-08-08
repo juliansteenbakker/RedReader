@@ -31,7 +31,9 @@ import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.GenericFactory;
 import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.Priority;
+import org.quantumbadger.redreader.common.RRError;
 import org.quantumbadger.redreader.common.datastream.SeekableInputStream;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.http.FailedRequestBody;
 
 import java.io.IOException;
@@ -51,6 +53,8 @@ public final class RedditVideosAPI {
 			"DASH_720",
 			"DASH_4_8_M", // 720p
 			"DASH_240",
+			"DASH_270",
+			"DASH_220",
 			"DASH_600_K", // 240p
 			"DASH_1080",
 			"DASH_9_6_M"  // 1080p
@@ -81,7 +85,7 @@ public final class RedditVideosAPI {
 					@Override
 					public void onDataStreamComplete(
 							@NonNull final GenericFactory<SeekableInputStream, IOException> stream,
-							final long timestamp,
+							final TimestampUTC timestamp,
 							@NonNull final UUID session,
 							final boolean fromCache,
 							@Nullable final String mimetype) {
@@ -95,12 +99,13 @@ public final class RedditVideosAPI {
 							Log.e(TAG, "Got exception", e);
 
 							if(!mNotifiedFailure.getAndSet(true)) {
-								listener.onFailure(
+								listener.onFailure(General.getGeneralErrorForFailure(
+										context,
 										CacheRequest.REQUEST_FAILURE_STORAGE,
 										e,
 										null,
-										"Failed to read mpd",
-										Optional.empty());
+										apiUrl,
+										FailedRequestBody.from(stream)));
 							}
 
 							return;
@@ -110,11 +115,22 @@ public final class RedditVideosAPI {
 							String videoUrl = null;
 							String audioUrl = null;
 
-							if(mpd.contains("DASH_audio.mp4")) {
-								audioUrl = "https://v.redd.it/" + imageId + "/DASH_audio.mp4";
+							// Hacky workaround -- we should parse the MPD
+							final String[] possibleFiles = {
+									"DASH_AUDIO_128.mp4",
+									"DASH_AUDIO_64.mp4",
+									"DASH_AUDIO.mp4",
+									"DASH_audio_128.mp4",
+									"DASH_audio_64.mp4",
+									"DASH_audio.mp4",
+									"audio"
+							};
 
-							} else if(mpd.contains("audio")) {
-								audioUrl = "https://v.redd.it/" + imageId + "/audio";
+							for(final String file : possibleFiles) {
+								if(mpd.contains(file)) {
+									audioUrl = "https://v.redd.it/" + imageId + "/" + file;
+									break;
+								}
 							}
 
 							for(final String format : PREFERRED_VIDEO_FORMATS) {
@@ -161,31 +177,22 @@ public final class RedditVideosAPI {
 							Log.e(TAG, "Got exception", e);
 
 							if(!mNotifiedFailure.getAndSet(true)) {
-								listener.onFailure(
+								listener.onFailure(General.getGeneralErrorForFailure(
+										context,
 										CacheRequest.REQUEST_FAILURE_STORAGE,
 										e,
 										null,
 										"Failed to parse mpd",
-										Optional.of(new FailedRequestBody(mpd)));
+										Optional.of(new FailedRequestBody(mpd))));
 							}
 						}
 					}
 
 					@Override
-					public void onFailure(
-							final int type,
-							@Nullable final Throwable t,
-							@Nullable final Integer httpStatus,
-							@Nullable final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> body) {
+					public void onFailure(@NonNull final RRError error) {
 
 						if(!mNotifiedFailure.getAndSet(true)) {
-							listener.onFailure(
-									type,
-									t,
-									httpStatus,
-									readableMessage,
-									body);
+							listener.onFailure(error);
 						}
 					}
 				}));

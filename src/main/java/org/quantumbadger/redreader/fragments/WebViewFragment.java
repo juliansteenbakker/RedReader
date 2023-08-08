@@ -46,9 +46,11 @@ import org.quantumbadger.redreader.common.AndroidCommon;
 import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.LinkHandler;
 import org.quantumbadger.redreader.common.PrefsUtility;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
+import org.quantumbadger.redreader.reddit.api.RedditPostActions;
+import org.quantumbadger.redreader.reddit.kthings.RedditPost;
 import org.quantumbadger.redreader.reddit.prepared.RedditParsedPost;
 import org.quantumbadger.redreader.reddit.prepared.RedditPreparedPost;
-import org.quantumbadger.redreader.reddit.things.RedditPost;
 import org.quantumbadger.redreader.reddit.url.RedditURLParser;
 import org.quantumbadger.redreader.views.RedditPostView;
 import org.quantumbadger.redreader.views.bezelmenu.BezelSwipeOverlay;
@@ -137,7 +139,7 @@ public class WebViewFragment extends Fragment
 					CacheManager.getInstance(mActivity),
 					0,
 					parsedPost,
-					-1,
+					TimestampUTC.ZERO,
 					false,
 					false,
 					false,
@@ -474,7 +476,8 @@ public class WebViewFragment extends Fragment
 						@Override
 						public boolean onSwipe(@BezelSwipeOverlay.SwipeEdge final int edge) {
 
-							toolbarOverlay.setContents(post.generateToolbar(
+							toolbarOverlay.setContents(RedditPostActions.INSTANCE.generateToolbar(
+									post,
 									mActivity,
 									false,
 									toolbarOverlay));

@@ -38,6 +38,7 @@ import org.quantumbadger.redreader.common.Priority;
 import org.quantumbadger.redreader.common.datastream.MemoryDataStream;
 import org.quantumbadger.redreader.common.datastream.SeekableFileInputStream;
 import org.quantumbadger.redreader.common.datastream.SeekableInputStream;
+import org.quantumbadger.redreader.common.time.TimeDuration;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -78,7 +79,7 @@ public final class CacheManager {
 
 	@SuppressLint("StaticFieldLeak") private static CacheManager singleton;
 
-	public static synchronized CacheManager getInstance(final Context context) {
+	public static synchronized CacheManager getInstance(@NonNull final Context context) {
 		if(singleton == null) {
 			singleton = new CacheManager(context.getApplicationContext());
 		}
@@ -204,17 +205,21 @@ public final class CacheManager {
 		}
 
 		/*Use a maximum age of 0 to clear everything* in that category.
-		Otherwise, use Long.MAX_VALUE as the maximum age to ensure that nothing is deleted.
+		Otherwise, use a high number as the maximum age to ensure that nothing is deleted.
 
 		*May not clear everything if system time shenanigans have occurred.*/
-		pruneCache(PrefsUtility.createFileTypeToLongMap(
-				clearListings ? 0 : Long.MAX_VALUE,
-				clearThumbnails ? 0 : Long.MAX_VALUE,
-				clearImages ? 0 : Long.MAX_VALUE
+
+		final TimeDuration clearEverything = TimeDuration.secs(0);
+		final TimeDuration clearNothing = TimeDuration.days(365 * 10);
+
+		pruneCache(PrefsUtility.createFileTypeMap(
+				clearListings ? clearEverything : clearNothing,
+				clearThumbnails ? clearEverything : clearNothing,
+				clearImages ? clearEverything : clearNothing
 		));
 	}
 
-	public synchronized void pruneCache(final HashMap<Integer, Long> maxAge) {
+	public synchronized void pruneCache(final HashMap<Integer, TimeDuration> maxAge) {
 
 		try {
 
@@ -228,7 +233,7 @@ public final class CacheManager {
 			final ArrayList<Long> filesToDelete = dbManager.getFilesToPrune(
 					currentFiles,
 					maxAge,
-					72);
+					TimeDuration.hours(72));
 
 			Log.i("CacheManager", "Pruning " + filesToDelete.size() + " files");
 
@@ -250,7 +255,7 @@ public final class CacheManager {
 	}
 
 	public synchronized HashMap<Integer, Long> getCacheDataUsages() {
-		final HashMap<Integer, Long> dataUsagePerType = PrefsUtility.createFileTypeToLongMap();
+		final HashMap<Integer, Long> dataUsagePerType = PrefsUtility.createFileTypeMap(0L, 0L, 0L);
 
 		try {
 			final HashSet<Long> currentFiles = new HashSet<>(128);
@@ -281,7 +286,7 @@ public final class CacheManager {
 		return dataUsagePerType;
 	}
 
-	public void makeRequest(final CacheRequest request) {
+	public void makeRequest(@NonNull final CacheRequest request) {
 		requests.put(request);
 	}
 
@@ -607,12 +612,13 @@ public final class CacheManager {
 		private void handleRequest(final CacheRequest request) {
 
 			if(request.url == null) {
-				request.notifyFailure(
+				request.notifyFailure(General.getGeneralErrorForFailure(
+						context,
 						CacheRequest.REQUEST_FAILURE_MALFORMED_URL,
 						new NullPointerException("URL was null"),
 						null,
-						"URL was null",
-						Optional.empty());
+						"null",
+						Optional.empty()));
 				return;
 			}
 
@@ -632,12 +638,13 @@ public final class CacheManager {
 						queueDownload(request);
 
 					} else {
-						request.notifyFailure(
+						request.notifyFailure(General.getGeneralErrorForFailure(
+								context,
 								CacheRequest.REQUEST_FAILURE_CACHE_MISS,
 								null,
 								null,
-								"Could not find this data in the cache",
-								Optional.empty());
+								request.url.toString(),
+								Optional.empty()));
 					}
 
 				} else {
@@ -658,7 +665,7 @@ public final class CacheManager {
 			CacheEntry entry = null;
 
 			for(final CacheEntry e : list) {
-				if(entry == null || entry.timestamp < e.timestamp) {
+				if(entry == null || entry.timestamp.isLessThan(e.timestamp)) {
 					entry = e;
 				}
 			}
@@ -672,12 +679,13 @@ public final class CacheManager {
 			try {
 				downloadQueue.add(request, CacheManager.this);
 			} catch(final Exception e) {
-				request.notifyFailure(
+				request.notifyFailure(General.getGeneralErrorForFailure(
+						context,
 						CacheRequest.REQUEST_FAILURE_MALFORMED_URL,
 						e,
 						null,
-						e.toString(),
-						Optional.empty());
+						request.url.toString(),
+						Optional.empty()));
 			}
 		}
 
@@ -689,14 +697,13 @@ public final class CacheManager {
 
 			if(cacheFile == null) {
 
-				request.notifyFailure(
+				request.notifyFailure(General.getGeneralErrorForFailure(
+						context,
 						CacheRequest.REQUEST_FAILURE_STORAGE,
 						new RuntimeException(),
 						null,
-						"A cache entry was found in the database, but"
-								+ " the actual data couldn't be found. Press refresh to"
-								+ " download the content again.",
-						Optional.empty());
+						request.url.toString(),
+						Optional.empty()));
 
 				dbManager.delete(entry.id);
 

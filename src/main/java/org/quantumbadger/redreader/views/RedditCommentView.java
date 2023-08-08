@@ -26,15 +26,20 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import org.quantumbadger.redreader.R;
+import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.activities.BaseActivity;
 import org.quantumbadger.redreader.common.General;
+import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.RRThemeAttributes;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.fragments.CommentListingFragment;
 import org.quantumbadger.redreader.reddit.RedditCommentListItem;
 import org.quantumbadger.redreader.reddit.api.RedditAPICommentAction;
+import org.quantumbadger.redreader.reddit.kthings.RedditIdAndType;
 import org.quantumbadger.redreader.reddit.prepared.RedditChangeDataManager;
 import org.quantumbadger.redreader.reddit.prepared.RedditParsedComment;
 import org.quantumbadger.redreader.reddit.prepared.RedditRenderableComment;
@@ -42,6 +47,8 @@ import org.quantumbadger.redreader.reddit.prepared.RedditRenderableComment;
 
 public class RedditCommentView extends FlingableItemView
 		implements RedditChangeDataManager.Listener {
+
+	private final AccessibilityActionManager mAccessibilityActionManager;
 
 	private RedditCommentListItem mComment;
 
@@ -311,6 +318,10 @@ public class RedditCommentView extends FlingableItemView
 
 		super(context);
 
+		mAccessibilityActionManager = new AccessibilityActionManager(
+				this,
+				context.getResources());
+
 		mActivity = context;
 		mTheme = themeAttributes;
 		mListener = listener;
@@ -349,7 +360,7 @@ public class RedditCommentView extends FlingableItemView
 	}
 
 	@Override
-	public void onRedditDataChange(final String thingIdAndType) {
+	public void onRedditDataChange(final RedditIdAndType thingIdAndType) {
 		reset(mActivity, mComment, true);
 	}
 
@@ -371,10 +382,10 @@ public class RedditCommentView extends FlingableItemView
 
 			if(mComment != comment) {
 				if(mComment != null) {
-					mChangeDataManager.removeListener(mComment.asComment(), this);
+					mChangeDataManager.removeListener(mComment.asComment().getIdAndType(), this);
 				}
 
-				mChangeDataManager.addListener(comment.asComment(), this);
+				mChangeDataManager.addListener(comment.asComment().getIdAndType(), this);
 			}
 
 			mComment = comment;
@@ -386,7 +397,7 @@ public class RedditCommentView extends FlingableItemView
 
 		final boolean hideLinkButtons = comment.asComment()
 				.getParsedComment()
-				.getRawComment().author.equalsIgnoreCase(
+				.getRawComment().getAuthor().getDecoded().equalsIgnoreCase(
 						"autowikibot");
 
 		mBodyHolder.removeAllViews();
@@ -406,13 +417,14 @@ public class RedditCommentView extends FlingableItemView
 
 		final int ageUnits = PrefsUtility.appearance_comment_age_units();
 
-		final long postTimestamp = (mFragment != null && mFragment.getPost() != null)
-				? mFragment.getPost().src.getCreatedTimeSecsUTC()
-				: RedditRenderableComment.NO_TIMESTAMP;
+		final TimestampUTC postTimestamp = (mFragment != null && mFragment.getPost() != null)
+				? mFragment.getPost().src.getCreatedTimeUTC()
+				: null;
 
-		final long parentCommentTimestamp = mComment.getParent() != null
-				? mComment.getParent().asComment().getParsedComment().getRawComment().created_utc
-				: RedditRenderableComment.NO_TIMESTAMP;
+		final TimestampUTC parentCommentTimestamp = mComment.getParent() != null
+				? mComment.getParent().asComment().getParsedComment().getRawComment()
+						.getCreated_utc().getValue()
+				: null;
 
 		final boolean isCollapsed = mComment.isCollapsed(mChangeDataManager);
 
@@ -431,7 +443,8 @@ public class RedditCommentView extends FlingableItemView
 				ageUnits,
 				postTimestamp,
 				parentCommentTimestamp,
-				isCollapsed));
+				isCollapsed,
+				Optional.of(comment.getIndent())));
 
 		if(isCollapsed) {
 			setFlingingEnabled(false);
@@ -445,9 +458,110 @@ public class RedditCommentView extends FlingableItemView
 			mHeader.setText(headerText);
 			mBodyHolder.setVisibility(VISIBLE);
 		}
+
+		setupAccessibilityActions();
+	}
+
+	private void setupAccessibilityActions() {
+
+		final RedditAccount defaultAccount
+				= RedditAccountManager.getInstance(mActivity).getDefaultAccount();
+		final boolean isAuthenticated = defaultAccount.isNotAnonymous();
+
+		mAccessibilityActionManager.removeAllActions();
+
+		if(!mComment.isComment()) {
+			return;
+		}
+
+		addAccessibilityActionFromDescriptionPair(
+			chooseFlingAction(PrefsUtility.CommentFlingAction.COLLAPSE));
+
+		if (isAuthenticated) {
+			addAccessibilityActionFromDescriptionPair(
+					chooseFlingAction(PrefsUtility.CommentFlingAction.REPLY));
+		}
+
+		// TODO null
+		if (mComment.asComment().getParsedComment().getRawComment()
+				.getAuthor().getDecoded().equalsIgnoreCase(defaultAccount.username)) {
+
+			addAccessibilityActionFromDescriptionPair(
+				new ActionDescriptionPair(
+					RedditAPICommentAction.RedditCommentAction.EDIT,
+					R.string.action_edit));
+
+			addAccessibilityActionFromDescriptionPair(
+				new ActionDescriptionPair(
+					RedditAPICommentAction.RedditCommentAction.DELETE,
+					R.string.action_delete));
+		}
+
+		// #136: When "save" is implemented for comments, add an a11y action
+		// here (behind an isAuthenticated guard).
+
+		addAccessibilityActionFromDescriptionPair(
+				chooseFlingAction(PrefsUtility.CommentFlingAction.USER_PROFILE));
+
+		if (isAuthenticated) {
+			addAccessibilityActionFromDescriptionPair(
+					chooseFlingAction(PrefsUtility.CommentFlingAction.REPORT));
+		}
+
+		addAccessibilityActionFromDescriptionPair(
+				chooseFlingAction(PrefsUtility.CommentFlingAction.SHARE));
+
+		if (isAuthenticated) {
+			addAccessibilityActionFromDescriptionPair(
+				chooseFlingAction(PrefsUtility.CommentFlingAction.DOWNVOTE));
+
+			addAccessibilityActionFromDescriptionPair(
+				chooseFlingAction(PrefsUtility.CommentFlingAction.UPVOTE));
+		}
+
+		mAccessibilityActionManager.setClickHint(
+			getAccessibilityHintForActionPref(PrefsUtility.pref_behaviour_actions_comment_tap())
+		);
+
+		mAccessibilityActionManager.setLongClickHint(
+			getAccessibilityHintForActionPref(
+					PrefsUtility.pref_behaviour_actions_comment_longclick())
+		);
+	}
+
+	@Nullable
+	@StringRes
+	private Integer getAccessibilityHintForActionPref(
+			@NonNull final PrefsUtility.CommentAction pref) {
+		switch (pref) {
+			case COLLAPSE:
+				return R.string.action_collapse;
+			case ACTION_MENU:
+				return R.string.action_actionmenu;
+		}
+		return null;
 	}
 
 	public RedditCommentListItem getComment() {
 		return mComment;
+	}
+
+	private void addAccessibilityActionFromDescriptionPair(
+			@Nullable final ActionDescriptionPair pair) {
+
+		if(pair == null) {
+			return;
+		}
+
+		mAccessibilityActionManager.addAction(pair.descriptionRes, () -> {
+			RedditAPICommentAction.onActionMenuItemSelected(
+				mComment.asComment(),
+				this,
+				mActivity,
+				mFragment,
+				pair.action,
+				mChangeDataManager
+			);
+		});
 	}
 }

@@ -19,12 +19,14 @@ package org.quantumbadger.redreader.common;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import org.quantumbadger.redreader.RedReader;
 import org.quantumbadger.redreader.common.collections.CollectionStream;
 import org.quantumbadger.redreader.reddit.things.SubredditCanonicalId;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashSet;
 
 public final class Constants {
 
@@ -60,14 +62,14 @@ public final class Constants {
 
 		public static final ArrayList<SubredditCanonicalId> DEFAULT_SUBREDDITS;
 
+		public static final HashSet<String> BOT_USERNAMES_LOWERCASE;
+
 		static {
 			final String[] defaultSubredditStrings = {
-					"/r/announcements",
 					"/r/Art",
 					"/r/AskReddit",
 					"/r/askscience",
 					"/r/aww",
-					"/r/blog",
 					"/r/books",
 					"/r/creepy",
 					"/r/dataisbeautiful",
@@ -100,6 +102,7 @@ public final class Constants {
 					"/r/philosophy",
 					"/r/photoshopbattles",
 					"/r/pics",
+					"/r/reddit",
 					"/r/science",
 					"/r/Showerthoughts",
 					"/r/space",
@@ -117,6 +120,13 @@ public final class Constants {
 			DEFAULT_SUBREDDITS = new CollectionStream<>(defaultSubredditStrings)
 					.mapRethrowExceptions(SubredditCanonicalId::new)
 					.collect(new ArrayList<>(defaultSubredditStrings.length));
+
+			BOT_USERNAMES_LOWERCASE = new HashSet<>();
+			BOT_USERNAMES_LOWERCASE.add("automoderator");
+			BOT_USERNAMES_LOWERCASE.add("qualityvote");
+			BOT_USERNAMES_LOWERCASE.add("visualmod");
+			BOT_USERNAMES_LOWERCASE.add("a-mirror-bot");
+			BOT_USERNAMES_LOWERCASE.add("unexbot");
 		}
 
 		public static final String SCHEME_HTTPS = "https";
@@ -149,6 +159,10 @@ public final class Constants {
 
 		public static String getHumanReadableDomain() {
 			return DOMAIN_HTTPS_HUMAN;
+		}
+
+		public static Uri.Builder getUriBuilder(final String path) {
+			return Uri.parse(getUri(path).toString()).buildUpon();
 		}
 
 		public static URI getUri(final String path) {
@@ -222,6 +236,7 @@ public final class Constants {
 		public static final int API_ACTION = -500;
 		public static final int API_MULTIREDDIT_LIST = -200;
 		public static final int API_SUBREDDIT_LIST = -100;
+		public static final int API_SUBREDDIT_SEARCH = -500;
 		public static final int API_SUBREDDIT_INVIDIVUAL = -250;
 		public static final int API_POST_LIST = -200;
 		public static final int API_COMMENT_LIST = -300;
@@ -250,4 +265,7 @@ public final class Constants {
 		public static final int INLINE_IMAGE_PREVIEW = 203;
 		public static final int IMAGE_INFO = 300;
 	}
+
+	public static final String OA_CS = "client_secret";
+	public static final String OA_CI = "client_id";
 }

@@ -34,12 +34,10 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.cache.CacheManager;
-import org.quantumbadger.redreader.cache.CacheRequest;
 import org.quantumbadger.redreader.common.AndroidCommon;
 import org.quantumbadger.redreader.common.DialogUtils;
 import org.quantumbadger.redreader.common.General;
@@ -49,11 +47,12 @@ import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.RRError;
 import org.quantumbadger.redreader.common.StringUtils;
 import org.quantumbadger.redreader.fragments.MarkdownPreviewDialog;
-import org.quantumbadger.redreader.http.FailedRequestBody;
 import org.quantumbadger.redreader.reddit.APIResponseHandler;
 import org.quantumbadger.redreader.reddit.RedditAPI;
+import org.quantumbadger.redreader.reddit.kthings.RedditIdAndType;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class CommentReplyActivity extends BaseActivity {
 
@@ -65,13 +64,13 @@ public class CommentReplyActivity extends BaseActivity {
 	private EditText textEdit;
 	private CheckBox inboxReplies;
 
-	private String parentIdAndType = null;
+	private RedditIdAndType parentIdAndType = null;
 
 	private ParentType mParentType;
 
 	private boolean mDraftReset = false;
 	private static String lastText;
-	private static String lastParentIdAndType;
+	private static RedditIdAndType lastParentIdAndType;
 
 	public static final String PARENT_TYPE = "parentType";
 	public static final String PARENT_TYPE_MESSAGE = "parentTypeMessage";
@@ -113,11 +112,15 @@ public class CommentReplyActivity extends BaseActivity {
 		}
 
 		if(intent != null && intent.hasExtra(PARENT_ID_AND_TYPE_KEY)) {
-			parentIdAndType = intent.getStringExtra(PARENT_ID_AND_TYPE_KEY);
+			//noinspection deprecation
+			parentIdAndType = Objects.requireNonNull(
+					intent.getParcelableExtra(PARENT_ID_AND_TYPE_KEY));
 
-		} else if(savedInstanceState != null && savedInstanceState.containsKey(
-				PARENT_ID_AND_TYPE_KEY)) {
-			parentIdAndType = savedInstanceState.getString(PARENT_ID_AND_TYPE_KEY);
+		} else if(savedInstanceState != null
+				&& savedInstanceState.containsKey(PARENT_ID_AND_TYPE_KEY)) {
+			//noinspection deprecation
+			parentIdAndType = Objects.requireNonNull(
+					savedInstanceState.getParcelable(PARENT_ID_AND_TYPE_KEY));
 
 		} else {
 			throw new RuntimeException("No parent ID in CommentReplyActivity");
@@ -174,7 +177,7 @@ public class CommentReplyActivity extends BaseActivity {
 	protected void onSaveInstanceState(@NonNull final Bundle outState) {
 		super.onSaveInstanceState(outState);
 		outState.putString(COMMENT_TEXT_KEY, textEdit.getText().toString());
-		outState.putString(PARENT_ID_AND_TYPE_KEY, parentIdAndType);
+		outState.putParcelable(PARENT_ID_AND_TYPE_KEY, parentIdAndType);
 	}
 
 	@Override
@@ -275,37 +278,7 @@ public class CommentReplyActivity extends BaseActivity {
 				}
 
 				@Override
-				protected void onFailure(
-						final int type,
-						@Nullable final Throwable t,
-						@Nullable final Integer httpStatus,
-						@Nullable final String readableMessage,
-						@NonNull final Optional<FailedRequestBody> response) {
-
-					final RRError error = General.getGeneralErrorForFailure(
-							context,
-							type,
-							t,
-							httpStatus,
-							"Comment reply: " + readableMessage,
-							response);
-
-					General.showResultDialog(CommentReplyActivity.this, error);
-					General.safeDismissDialog(progressDialog);
-				}
-
-				@Override
-				protected void onFailure(
-						@NonNull final APIFailureType type,
-						@Nullable final String debuggingContext,
-						@NonNull final Optional<FailedRequestBody> response) {
-
-					final RRError error = General.getGeneralErrorForFailure(
-							context,
-							type,
-							debuggingContext,
-							response);
-
+				protected void onFailure(@NonNull final RRError error) {
 					General.showResultDialog(CommentReplyActivity.this, error);
 					General.safeDismissDialog(progressDialog);
 				}
@@ -324,24 +297,7 @@ public class CommentReplyActivity extends BaseActivity {
 				}
 
 				@Override
-				protected void onFailure(
-						@CacheRequest.RequestFailureType final int type,
-						final Throwable t,
-						final Integer status,
-						final String readableMessage,
-						@NonNull final Optional<FailedRequestBody> response) {
-					Toast.makeText(
-							context,
-							getString(R.string.disable_replies_to_infobox_failed),
-							Toast.LENGTH_SHORT).show();
-				}
-
-				@Override
-				protected void onFailure(
-						@NonNull final APIFailureType type,
-						@Nullable final String readableMessage,
-						@NonNull final Optional<FailedRequestBody> response) {
-
+				protected void onFailure(@NonNull final RRError error) {
 					Toast.makeText(
 							context,
 							getString(R.string.disable_replies_to_infobox_failed),

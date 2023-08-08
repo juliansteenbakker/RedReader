@@ -52,15 +52,18 @@ import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.RRError;
 import org.quantumbadger.redreader.common.RRThemeAttributes;
-import org.quantumbadger.redreader.common.RRTime;
 import org.quantumbadger.redreader.common.TimestampBound;
+import org.quantumbadger.redreader.common.time.TimeDuration;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.reddit.CommentListingRequest;
 import org.quantumbadger.redreader.reddit.RedditCommentListItem;
 import org.quantumbadger.redreader.reddit.api.RedditAPICommentAction;
+import org.quantumbadger.redreader.reddit.api.RedditPostActions;
 import org.quantumbadger.redreader.reddit.prepared.RedditChangeDataManager;
 import org.quantumbadger.redreader.reddit.prepared.RedditPreparedPost;
 import org.quantumbadger.redreader.reddit.prepared.RedditRenderableComment;
 import org.quantumbadger.redreader.reddit.url.RedditURLParser;
+import org.quantumbadger.redreader.views.AccessibilityActionManager;
 import org.quantumbadger.redreader.views.RedditCommentView;
 import org.quantumbadger.redreader.views.RedditPostHeaderView;
 import org.quantumbadger.redreader.views.RedditPostView;
@@ -104,7 +107,7 @@ public class CommentListingFragment extends RRFragment
 	private final float mSelfTextFontScale;
 	private final boolean mShowLinkButtons;
 
-	private Long mCachedTimestamp = null;
+	private TimestampUTC mCachedTimestamp = null;
 
 	private Integer mPreviousFirstVisibleItemPosition;
 
@@ -141,7 +144,7 @@ public class CommentListingFragment extends RRFragment
 				&& savedInstanceState == null
 				&& General.isNetworkConnected(parent)) {
 			mDownloadStrategy = new DownloadStrategyIfTimestampOutsideBounds(
-					TimestampBound.notOlderThan(RRTime.minsToMs(20)));
+					TimestampBound.notOlderThan(TimeDuration.minutes(20)));
 
 		} else {
 			mDownloadStrategy = DownloadStrategyIfNotCached.INSTANCE;
@@ -327,7 +330,8 @@ public class CommentListingFragment extends RRFragment
 							return false;
 						}
 
-						toolbarOverlay.setContents(mPost.generateToolbar(
+						toolbarOverlay.setContents(RedditPostActions.INSTANCE.generateToolbar(
+								mPost,
 								(BaseActivity)getActivity(),
 								true,
 								toolbarOverlay));
@@ -369,8 +373,8 @@ public class CommentListingFragment extends RRFragment
 			final RedditRenderableComment comment = item.asComment();
 
 			changeDataManager.markHidden(
-					RRTime.utcCurrentTimeMillis(),
-					comment,
+					TimestampUTC.now(),
+					comment.getIdAndType(),
 					!comment.isCollapsed(changeDataManager));
 
 			mCommentListingManager.updateHiddenStatus();
@@ -500,7 +504,7 @@ public class CommentListingFragment extends RRFragment
 	}
 
 	@Override
-	public void onCommentListingRequestCachedCopy(final long timestamp) {
+	public void onCommentListingRequestCachedCopy(final TimestampUTC timestamp) {
 		mCachedTimestamp = timestamp;
 	}
 
@@ -582,9 +586,17 @@ public class CommentListingFragment extends RRFragment
 				}
 
 				paddingLayout.setOnLongClickListener(v -> {
-					RedditPreparedPost.showActionMenu(activity, mPost);
+					RedditPostActions.INSTANCE.showActionMenu(activity, mPost);
 					return true;
 				});
+
+				RedditPostActions.INSTANCE.setupAccessibilityActions(
+						new AccessibilityActionManager(
+								paddingLayout,
+								activity.getResources()),
+						post,
+						activity,
+						true);
 
 				mCommentListingManager.addPostSelfText(paddingLayout);
 			}
@@ -616,17 +628,18 @@ public class CommentListingFragment extends RRFragment
 			}
 
 			// 30 minutes
-			if(mCachedTimestamp != null
-					&& RRTime.since(mCachedTimestamp) > 30 * 60 * 1000) {
+			if(mCachedTimestamp != null) {
+				if (mCachedTimestamp.elapsed().isGreaterThan(TimeDuration.minutes(30))) {
 
-				final TextView cacheNotif = (TextView)LayoutInflater.from(activity).inflate(
-						R.layout.cached_header,
-						null,
-						false);
-				cacheNotif.setText(activity.getString(
-						R.string.listing_cached,
-						RRTime.formatDateTime(mCachedTimestamp, activity)));
-				mCommentListingManager.addNotification(cacheNotif);
+					final TextView cacheNotif = (TextView) LayoutInflater.from(activity).inflate(
+							R.layout.cached_header,
+							null,
+							false);
+					cacheNotif.setText(activity.getString(
+							R.string.listing_cached,
+							mCachedTimestamp.format()));
+					mCommentListingManager.addNotification(cacheNotif);
+				}
 			}
 		}
 	}
@@ -729,10 +742,10 @@ public class CommentListingFragment extends RRFragment
 				&& item.getTitle()
 				.equals(getActivity().getString(R.string.action_reply))) {
 
-			RedditPreparedPost.onActionMenuItemSelected(
+			RedditPostActions.INSTANCE.onActionMenuItemSelected(
 					mPost,
 					(BaseActivity)getActivity(),
-					RedditPreparedPost.Action.REPLY);
+					RedditPostActions.Action.REPLY);
 			return true;
 		}
 

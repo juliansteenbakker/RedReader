@@ -25,12 +25,13 @@ import androidx.annotation.Nullable;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.activities.BugReportActivity;
 import org.quantumbadger.redreader.cache.downloadstrategy.DownloadStrategy;
+import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.GenericFactory;
 import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.Priority;
 import org.quantumbadger.redreader.common.RRError;
 import org.quantumbadger.redreader.common.datastream.SeekableInputStream;
-import org.quantumbadger.redreader.http.FailedRequestBody;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.http.body.HTTPRequestBody;
 
 import java.io.IOException;
@@ -45,6 +46,7 @@ public final class CacheRequest implements Comparable<CacheRequest> {
 	public static final int DOWNLOAD_QUEUE_IMGUR_API = 1;
 	public static final int DOWNLOAD_QUEUE_IMMEDIATE = 2;
 	public static final int DOWNLOAD_QUEUE_IMAGE_PRECACHE = 3;
+	public static final int DOWNLOAD_QUEUE_REDGIFS_API_V2 = 4;
 
 	public static final int REQUEST_FAILURE_CONNECTION = 0;
 	public static final int REQUEST_FAILURE_REQUEST = 1;
@@ -61,7 +63,7 @@ public final class CacheRequest implements Comparable<CacheRequest> {
 
 	@IntDef({
 			DOWNLOAD_QUEUE_REDDIT_API, DOWNLOAD_QUEUE_IMGUR_API, DOWNLOAD_QUEUE_IMMEDIATE,
-			DOWNLOAD_QUEUE_IMAGE_PRECACHE})
+			DOWNLOAD_QUEUE_IMAGE_PRECACHE, DOWNLOAD_QUEUE_REDGIFS_API_V2})
 	@Retention(RetentionPolicy.SOURCE)
 	public @interface DownloadQueueType {
 	}
@@ -215,7 +217,7 @@ public final class CacheRequest implements Comparable<CacheRequest> {
 			final Context context,
 			final CacheRequestCallbacks callbacks) {
 
-		this.context = context;
+		this.context = context.getApplicationContext();
 		mCallbacks = callbacks;
 
 		if(user == null) {
@@ -239,12 +241,13 @@ public final class CacheRequest implements Comparable<CacheRequest> {
 		this.cache = (requestBody == null) && cache;
 
 		if(url == null) {
-			notifyFailure(
+			notifyFailure(General.getGeneralErrorForFailure(
+					this.context,
 					REQUEST_FAILURE_MALFORMED_URL,
 					null,
 					null,
-					"Malformed URL",
-					Optional.empty());
+					"null",
+					Optional.empty()));
 			cancel();
 		}
 	}
@@ -267,7 +270,7 @@ public final class CacheRequest implements Comparable<CacheRequest> {
 
 	public void notifyDataStreamAvailable(
 			@NonNull final GenericFactory<SeekableInputStream, IOException> streamFactory,
-			final long timestamp,
+			final TimestampUTC timestamp,
 			@NonNull final UUID session,
 			final boolean fromCache,
 			@Nullable final String mimetype) {
@@ -277,7 +280,7 @@ public final class CacheRequest implements Comparable<CacheRequest> {
 
 	public void notifyDataStreamComplete(
 			@NonNull final GenericFactory<SeekableInputStream, IOException> streamFactory,
-			final long timestamp,
+			final TimestampUTC timestamp,
 			@NonNull final UUID session,
 			final boolean fromCache,
 			@Nullable final String mimetype) {
@@ -285,15 +288,10 @@ public final class CacheRequest implements Comparable<CacheRequest> {
 		mCallbacks.onDataStreamComplete(streamFactory, timestamp, session, fromCache, mimetype);
 	}
 
-	public void notifyFailure(
-			final @RequestFailureType int type,
-			final Throwable t,
-			final Integer httpStatus,
-			final String readableMessage,
-			@NonNull final Optional<FailedRequestBody> body) {
+	public void notifyFailure(@NonNull final RRError error) {
 
 		try {
-			mCallbacks.onFailure(type, t, httpStatus, readableMessage, body);
+			mCallbacks.onFailure(error);
 
 		} catch(final Throwable t1) {
 			onCallbackException(t1);
@@ -313,7 +311,7 @@ public final class CacheRequest implements Comparable<CacheRequest> {
 
 	public void notifyCacheFileWritten(
 			final CacheManager.ReadableCacheFile cacheFile,
-			final long timestamp,
+			final TimestampUTC timestamp,
 			final UUID session,
 			final boolean fromCache,
 			final String mimetype) {

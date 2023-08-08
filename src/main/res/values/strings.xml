@@ -16,7 +16,7 @@
   ~ along with RedReader.  If not, see <http://www.gnu.org/licenses/>.
   -->
 
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="app_name" translatable="false">WearReader</string>
 
@@ -220,7 +220,7 @@
     <string name="action_external">View in External Browser</string>
     <string name="action_external_short">In Browser</string>
     <string name="action_actionmenu_short">Actions</string>
-    <string name="action_actionmenu">Action Menu</string>
+    <string name="action_actionmenu">Open Action Menu</string>
     <string name="action_comment_links">Links in Comment</string>
     <string name="action_selftext_links">Links in Self Text</string>
     <string name="action_share">Share</string>
@@ -1369,20 +1369,23 @@
 	<string name="accessibility_image_viewer_view_comments">View comments</string>
 	<string name="accessibility_image_viewer_go_back">Go back</string>
 
-	<string name="accessibility_subtitle_spoiler_withperiod">Contains spoilers.</string>
+	<string name="accessibility_subtitle_spoiler_withperiod">has spoilers.</string>
 	<string name="accessibility_subtitle_sticky_withperiod">Sticky.</string>
 	<string name="accessibility_subtitle_nsfw_withperiod">Not safe for work.</string>
 	<string name="accessibility_subtitle_flair_withperiod">Flair: %s.</string>
-	<string name="accessibility_subtitle_points_withperiod">Score: %d.</string>
-	<string name="accessibility_subtitle_gold_withperiod">Awarded gold: %d.</string>
-	<string name="accessibility_subtitle_age_withperiod">Age: %s.</string>
+	<plurals name="accessibility_subtitle_points_withperiod_plural">
+		<item quantity="one">"%d up vote."</item>
+		<item quantity="other">"%d up votes."</item>
+	</plurals>
+	<string name="accessibility_subtitle_gold_withperiod">Gildings: %d.</string>
+	<string name="accessibility_subtitle_age_withperiod">%s.</string>
 	<string name="accessibility_subtitle_author_withperiod">Author: %s.</string>
 	<string name="accessibility_subtitle_subreddit_withperiod">Sub-reddit: %s.</string>
 	<string name="accessibility_subtitle_domain_withperiod">Domain: %s.</string>
-	<string name="accessibility_subtitle_selfpost_withperiod">Text post.</string>
+	<string name="accessibility_subtitle_selfpost_withperiod">Self post.</string>
 	<string name="accessibility_subtitle_points_unknown_withperiod">Score hidden.</string>
-	<string name="accessibility_subtitle_edited_since_being_posted">Text edited since being posted.</string>
-	<string name="accessibility_subtitle_comment_collapsed">Comment text hidden.</string>
+	<string name="accessibility_subtitle_edited_since_being_posted">Edited.</string>
+	<string name="accessibility_subtitle_comment_collapsed">Comment collapsed.</string>
 
 	<string name="accessibility_subtitle_domain_i_redd_it">Reddit images</string>
 	<string name="accessibility_subtitle_domain_v_redd_it">Reddit videos</string>
@@ -1641,5 +1644,131 @@
 	<string name="sort_comments_controversial_suggested">Controversial (suggested)</string>
 	<string name="sort_comments_top_suggested">Top (suggested)</string>
 	<string name="sort_comments_qa_suggested">Q&amp;A (suggested)</string>
+
+	<!-- 2022-01-26 -->
+	<string name="pref_appearance_post_subtitle_items_upvote_ratio">Percent upvoted</string>
+	<string name="subtitle_upvote_ratio">upvoted</string>
+	<string name="accessibility_subtitle_upvote_ratio_withperiod" tools:ignore="PluralsCandidate">%d percent up voted.</string>
+
+	<!-- 2022-02-19 -->
+	<string name="find_subreddit">Find Subreddit</string>
+
+	<!-- 2022-02-10 -->
+	<string name="pref_behaviour_block_screenshots_key">pref_behaviour_block_screenshots</string>
+	<string name="pref_behaviour_block_screenshots_title">Block screenshots</string>
+	<string name="pref_behaviour_block_screenshots_summary">Prevent screenshots from being taken, and hide the app content in the recents menu</string>
+
+	<!-- 2022-03-25 -->
+	<string name="pref_accessibility_say_comment_indent_level_key">pref_accessibility_say_comment_indent_level</string>
+	<string name="pref_accessibility_say_comment_indent_level_title">Announce comment indent</string>
+	<string name="pref_accessibility_say_comment_indent_level_summary">Announce relative level (indent) of comments within a thread</string>
+	<string name="accessibility_comment_indent_level" tools:ignore="PluralsCandidate">Level %d comment.</string>
+
+	<string name="pref_behaviour_collapse_sticky_comments_key">pref_behaviour_collapse_sticky_comments</string>
+	<string name="pref_behaviour_collapse_sticky_comments_title">Collapse sticky comments</string>
+	<string name="pref_behaviour_collapse_sticky_comments_option_always">Always</string>
+	<string name="pref_behaviour_collapse_sticky_comments_option_only_bots">Only comments by bots</string>
+	<string name="pref_behaviour_collapse_sticky_comments_option_never">Never</string>
+
+	<!-- 2022-04-05 -->
+	<string name="pref_accessibility_concise_mode_key">pref_accessibility_concise_mode</string>
+	<string name="pref_accessibility_concise_mode_title">Use concise language when possible</string>
+	<string name="pref_accessibility_concise_mode_summary">Make accessibility labels less verbose to make navigation more efficient for experienced Redditors</string>
+	<string name="accessibility_subtitle_flair_withperiod_concise">[%s].</string>
+	<string name="accessibility_subtitle_nsfw_withperiod_concise">NSFW.</string>
+	<plurals name="accessibility_subtitle_points_withperiod_concise_plural">
+		<item quantity="one">"%d up."</item>
+		<item quantity="other">"%d up."</item>
+	</plurals>
+	<string name="accessibility_subtitle_author_withperiod_concise_post">u/%s.</string>
+	<string name="accessibility_subtitle_author_withperiod_concise_comment">%s.</string>
+	<string name="accessibility_subtitle_subreddit_withperiod_concise">r/%s.</string>
+	<string name="accessibility_subtitle_domain_withperiod_concise">%s.</string>
+	<string name="accessibility_subtitle_selfpost_withperiod_concise">Self.</string>
+	<string name="accessibility_subtitle_comment_collapsed_concise">Collapsed.</string>
+	<string name="accessibility_subtitle_author_submitter_withperiod_concise">%s, OP.</string>
+	<string name="accessibility_subtitle_author_moderator_withperiod_concise_post">u/%s, mod.</string>
+	<string name="accessibility_subtitle_author_moderator_withperiod_concise_comment">%s, mod.</string>
+	<string name="accessibility_subtitle_author_admin_withperiod_concise_post">u/%s, admin.</string>
+	<string name="accessibility_subtitle_author_admin_withperiod_concise_comment">%s, admin.</string>
+	<string name="accessibility_subtitle_author_submitter_moderator_withperiod_concise">%s, OP and mod.</string>
+	<string name="accessibility_subtitle_author_submitter_admin_withperiod_concise">%s, OP and admin.</string>
+	<string name="accessibility_subtitle_controversiality_withperiod_concise">Controversial.</string>
+	<string name="accessibility_subtitle_upvote_ratio_withperiod_concise" tools:ignore="PluralsCandidate">%d percent up.</string>
+	<string name="accessibility_comment_indent_level_concise" tools:ignore="PluralsCandidate">l%d.</string>
+	<string name="accessibility_subtitle_upvoted_withperiod">Upvoted.</string>
+	<string name="accessibility_subtitle_downvoted_withperiod">Downvoted.</string>
+
+	<!-- 2022-04-10 -->
+	<string name="accessibility_post_already_read_withperiod">Read.</string>
+
+	<!-- 2022-05-17 -->
+	<string name="pref_behaviour_keep_screen_awake_key">pref_behaviour_keep_screen_awake</string>
+	<string name="pref_behaviour_keep_screen_awake_title">Keep screen awake</string>
+	<string name="pref_behaviour_keep_screen_awake_summary">Keep screen awake when RedReader is running in the foreground</string>
+
+	<!-- 2022-05-23 -->
+	<string name="subtitle_comments">cmts</string>
+	<string name="pref_appearance_post_subtitle_items_comments">Comments</string>
+	<plurals name="accessibility_subtitle_comments_withperiod_plural">
+		<item quantity="one">%d comment.</item>
+		<item quantity="other">%d comments.</item>
+	</plurals>
+
+	<!-- 2022-05-29 -->
+	<string name="find_location">Find Location</string>
+
+	<string name="find_location_button_goto_subreddit">Go to subreddit</string>
+	<string name="find_location_button_goto_user">User</string>
+	<string name="find_location_button_goto_url">URL</string>
+	<string name="find_location_button_search_posts">Search Posts</string>
+
+	<!-- 2022-06-27 -->
+	<string name="pref_appearance_post_hide_subreddit_header_key">pref_appearance_post_hide_subreddit_header</string>
+	<string name="pref_appearance_post_hide_subreddit_header_title">Hide subreddit header</string>
+
+	<!-- 2022-09-10 -->
+	<string name="post_domain_deleted">deleted</string>
+
+	<!-- 2023-01-15 -->
+	<string name="userprofile_avatar">Avatar</string>
+
+	<!-- 2023-06-18 -->
+	<string name="reddit_login_browser_popup_line_2_internal_browser_only">When the login is complete, you should be redirected back to RedReader.</string>
+
+	<string name="reddit_terms_title">Reddit User Agreement</string>
+	<string name="reddit_terms_message">RedReader accesses content using the Reddit API. To access Reddit, please read the terms and conditions at the link below, and confirm that you accept them.</string>
+	<string name="reddit_terms_view_button">View Reddit User Agreement</string>
+	<string name="terms_accept">Accept</string>
+	<string name="terms_decline">Decline</string>
+
+	<string name="reddit_terms_error_title">Reddit user agreement not accepted</string>
+	<string name="reddit_terms_error_message">If you wish to access content through the Reddit API, please accept their user agreement.</string>
+	<string name="reddit_terms_error_resolution_button">View agreement</string>
+
+	<string name="pref_reddit_client_id_override_key" translatable="false">pref_reddit_client_id_override</string>
+	<string name="pref_reddit_client_id_override_title" translatable="false">Reddit client ID override</string>
+
+	<string name="error_403_private_sr_title">Private subreddit</string>
+	<string name="error_403_private_sr_message">This subreddit has been set to private.</string>
+
+	<string name="reddit_relogin_error_title">Re-login necessary</string>
+	<string name="reddit_relogin_error_message">Due to recent changes to the Reddit API, it is necessary to log in to your account again.</string>
+
+	<!-- 2023-07-05 -->
+	<string name="accessibility_subtitle_has_selftext_withperiod">Has self text.</string>
+
+	<!-- 2023-07-06 -->
+	<string name="error_403_quarantined_sr_title">Quarantined subreddit</string>
+	<string name="error_403_quarantined_sr_message">This subreddit has been quarantined. To access it, you must opt-in on reddit.com.</string>
+	<string name="error_403_premiumonly_sr_title">Premium-only subreddit</string>
+	<string name="error_403_premiumonly_sr_message">This subreddit only allows Reddit Premium members to visit.</string>
+	<string name="error_404_banned_sr_title">Banned subreddit</string>
+	<string name="error_404_banned_sr_message">This subreddit has been banned.</string>
+
+	<!-- 2023-07-07 -->
+	<string name="pref_appearance_user_header">User Profiles</string>
+	<string name="pref_appearance_user_show_avatars_title">Show avatars</string>
+	<string name="pref_appearance_user_show_avatars_key">pref_appearance_user_show_avatars</string>
 
 </resources>

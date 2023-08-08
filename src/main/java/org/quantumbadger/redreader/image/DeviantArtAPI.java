@@ -19,7 +19,6 @@ package org.quantumbadger.redreader.image;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.cache.CacheManager;
 import org.quantumbadger.redreader.cache.CacheRequest;
@@ -29,6 +28,8 @@ import org.quantumbadger.redreader.common.Constants;
 import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.Priority;
+import org.quantumbadger.redreader.common.RRError;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.http.FailedRequestBody;
 import org.quantumbadger.redreader.jsonwrap.JsonObject;
 import org.quantumbadger.redreader.jsonwrap.JsonValue;
@@ -67,7 +68,7 @@ public final class DeviantArtAPI {
 					@Override
 					public void onJsonParsed(
 							@NonNull final JsonValue result,
-							final long timestamp,
+							final TimestampUTC timestamp,
 							@NonNull final UUID session, final boolean fromCache) {
 
 						try {
@@ -75,29 +76,19 @@ public final class DeviantArtAPI {
 							listener.onSuccess(ImageInfo.parseDeviantArt(outer));
 
 						} catch(final Throwable t) {
-							listener.onFailure(
+							listener.onFailure(General.getGeneralErrorForFailure(
+									context,
 									CacheRequest.REQUEST_FAILURE_PARSE,
 									t,
 									null,
-									"DeviantArt data parse failed",
-									Optional.of(new FailedRequestBody(result)));
+									apiUrl,
+									Optional.of(new FailedRequestBody(result))));
 						}
 					}
 
 					@Override
-					public void onFailure(
-							final int type,
-							@Nullable final Throwable t,
-							@Nullable final Integer httpStatus,
-							@Nullable final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> body) {
-
-						listener.onFailure(
-								type,
-								t,
-								httpStatus,
-								readableMessage,
-								body);
+					public void onFailure(@NonNull final RRError error) {
+						listener.onFailure(error);
 					}
 				})));
 	}

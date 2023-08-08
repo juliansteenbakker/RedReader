@@ -45,8 +45,8 @@ import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.common.AndroidCommon;
 import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.PrefsUtility;
-import org.quantumbadger.redreader.common.RRTime;
 
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ExoPlayerWrapperView extends FrameLayout {
@@ -134,7 +134,7 @@ public class ExoPlayerWrapperView extends FrameLayout {
 			addButton(createButton(
 					context,
 					mControlView,
-					R.drawable.exo_controls_previous,
+					R.drawable.icon_previous,
 					R.string.video_restart,
 					view -> {
 						mVideoPlayer.seekTo(0);
@@ -144,7 +144,7 @@ public class ExoPlayerWrapperView extends FrameLayout {
 			addButton(createButton(
 					context,
 					mControlView,
-					R.drawable.exo_controls_rewind,
+					R.drawable.icon_rewind,
 					R.string.video_rewind,
 					view -> {
 						if(mVideoPlayer.getCurrentPosition() > 3000) {
@@ -162,19 +162,19 @@ public class ExoPlayerWrapperView extends FrameLayout {
 				playButton.set(createButton(
 						context,
 						mControlView,
-						R.drawable.exo_controls_pause,
+						R.drawable.icon_pause,
 						R.string.video_pause,
 						view -> {
 							mVideoPlayer.setPlayWhenReady(!mVideoPlayer.getPlayWhenReady());
 
 							if(mVideoPlayer.getPlayWhenReady()) {
 								playButton.get()
-										.setImageResource(R.drawable.exo_controls_pause);
+										.setImageResource(R.drawable.icon_pause);
 								playButton.get().setContentDescription(
 										context.getString(R.string.video_pause));
 							} else {
 								playButton.get()
-										.setImageResource(R.drawable.exo_controls_play);
+										.setImageResource(R.drawable.icon_play);
 								playButton.get().setContentDescription(
 										context.getString(R.string.video_play));
 							}
@@ -188,7 +188,7 @@ public class ExoPlayerWrapperView extends FrameLayout {
 			addButton(createButton(
 					context,
 					mControlView,
-					R.drawable.exo_controls_fastforward,
+					R.drawable.icon_fastforward,
 					R.string.video_fast_forward,
 					view -> {
 						mVideoPlayer.seekTo(mVideoPlayer.getCurrentPosition() + 3000);
@@ -392,9 +392,9 @@ public class ExoPlayerWrapperView extends FrameLayout {
 				mTimeBarView.setPosition(currentPositionMs);
 				mTimeBarView.setBufferedPosition(mVideoPlayer.getBufferedPosition());
 
-				final String newText = RRTime.msToMinutesAndSecondsString(currentPositionMs)
+				final String newText = msToMinutesAndSecondsString(currentPositionMs)
 						+ " / "
-						+ RRTime.msToMinutesAndSecondsString(durationMs);
+						+ msToMinutesAndSecondsString(durationMs);
 
 				if(!newText.contentEquals(mTimeTextView.getText())) {
 					mTimeTextView.setText(newText);
@@ -418,5 +418,20 @@ public class ExoPlayerWrapperView extends FrameLayout {
 
 	public int isControlViewVisible() {
 		return mControlView != null ? mControlView.getVisibility() : GONE;
+	}
+
+	@NonNull
+	public static String msToMinutesAndSecondsString(final long ms) {
+
+		if(ms < 0) {
+			return "<negative time>";
+		}
+
+		final int secondsTotal = (int)(ms / 1000);
+
+		final int mins = secondsTotal / 60;
+		final int secs = secondsTotal % 60;
+
+		return String.format(Locale.US, "%d:%02d", mins, secs);
 	}
 }

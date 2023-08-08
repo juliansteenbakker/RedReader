@@ -40,11 +40,11 @@ import org.quantumbadger.redreader.activities.BaseActivity;
 import org.quantumbadger.redreader.activities.BugReportActivity;
 import org.quantumbadger.redreader.activities.OptionsMenuUtility;
 import org.quantumbadger.redreader.activities.SessionChangeListener;
+import org.quantumbadger.redreader.adapters.MainMenuListingManager;
 import org.quantumbadger.redreader.adapters.PostListingManager;
 import org.quantumbadger.redreader.cache.CacheManager;
 import org.quantumbadger.redreader.cache.CacheRequest;
 import org.quantumbadger.redreader.cache.CacheRequestCallbacks;
-import org.quantumbadger.redreader.cache.CacheRequestJSONParser;
 import org.quantumbadger.redreader.cache.downloadstrategy.DownloadStrategy;
 import org.quantumbadger.redreader.cache.downloadstrategy.DownloadStrategyAlways;
 import org.quantumbadger.redreader.cache.downloadstrategy.DownloadStrategyIfNotCached;
@@ -54,32 +54,34 @@ import org.quantumbadger.redreader.common.AndroidCommon;
 import org.quantumbadger.redreader.common.Constants;
 import org.quantumbadger.redreader.common.FileUtils;
 import org.quantumbadger.redreader.common.General;
+import org.quantumbadger.redreader.common.GenericFactory;
 import org.quantumbadger.redreader.common.LinkHandler;
-import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.Priority;
 import org.quantumbadger.redreader.common.RRError;
-import org.quantumbadger.redreader.common.RRTime;
 import org.quantumbadger.redreader.common.TimestampBound;
+import org.quantumbadger.redreader.common.datastream.SeekableInputStream;
+import org.quantumbadger.redreader.common.time.TimeDuration;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.http.FailedRequestBody;
 import org.quantumbadger.redreader.image.GetImageInfoListener;
 import org.quantumbadger.redreader.image.ImageInfo;
 import org.quantumbadger.redreader.io.RequestResponseHandler;
-import org.quantumbadger.redreader.jsonwrap.JsonArray;
-import org.quantumbadger.redreader.jsonwrap.JsonObject;
-import org.quantumbadger.redreader.jsonwrap.JsonValue;
 import org.quantumbadger.redreader.listingcontrollers.CommentListingController;
 import org.quantumbadger.redreader.reddit.PostSort;
 import org.quantumbadger.redreader.reddit.RedditPostListItem;
 import org.quantumbadger.redreader.reddit.RedditSubredditManager;
 import org.quantumbadger.redreader.reddit.api.RedditSubredditSubscriptionManager;
-import org.quantumbadger.redreader.reddit.api.SubredditRequestFailure;
+import org.quantumbadger.redreader.reddit.kthings.JsonUtils;
+import org.quantumbadger.redreader.reddit.kthings.MaybeParseError;
+import org.quantumbadger.redreader.reddit.kthings.RedditIdAndType;
+import org.quantumbadger.redreader.reddit.kthings.RedditListing;
+import org.quantumbadger.redreader.reddit.kthings.RedditPost;
+import org.quantumbadger.redreader.reddit.kthings.RedditThing;
 import org.quantumbadger.redreader.reddit.prepared.RedditParsedPost;
 import org.quantumbadger.redreader.reddit.prepared.RedditPreparedPost;
 import org.quantumbadger.redreader.reddit.things.InvalidSubredditNameException;
-import org.quantumbadger.redreader.reddit.things.RedditPost;
 import org.quantumbadger.redreader.reddit.things.RedditSubreddit;
-import org.quantumbadger.redreader.reddit.things.RedditThing;
 import org.quantumbadger.redreader.reddit.things.SubredditCanonicalId;
 import org.quantumbadger.redreader.reddit.url.PostCommentListingURL;
 import org.quantumbadger.redreader.reddit.url.PostListingURL;
@@ -92,6 +94,7 @@ import org.quantumbadger.redreader.views.ScrollbarRecyclerViewManager;
 import org.quantumbadger.redreader.views.SearchListingHeader;
 import org.quantumbadger.redreader.views.liststatus.ErrorView;
 
+import java.io.IOException;
 import java.net.URI;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -120,11 +123,11 @@ public class PostListingFragment extends RRFragment
 
 	private final View mOuter;
 
-	private String mAfter = null;
-	private String mLastAfter = null;
+	private RedditIdAndType mAfter = null;
+	private RedditIdAndType mLastAfter = null;
 	private CacheRequest mRequest;
 	private boolean mReadyToDownloadMore = false;
-	private long mTimestamp;
+	private TimestampUTC mTimestamp;
 
 	private int mPostCount = 0;
 	private boolean mPostsNotShown = false;
@@ -242,10 +245,10 @@ public class PostListingFragment extends RRFragment
 				&& savedInstanceState == null
 				&& General.isNetworkConnected(context)) {
 
-			final long maxAgeMs = PrefsUtility.pref_cache_rerequest_postlist_age_ms();
-			downloadStrategy = new DownloadStrategyIfTimestampOutsideBounds(TimestampBound
-					.notOlderThan(
-							maxAgeMs));
+			final TimeDuration maxAge
+					= PrefsUtility.pref_cache_rerequest_postlist_age();
+			downloadStrategy = new DownloadStrategyIfTimestampOutsideBounds(
+					TimestampBound.notOlderThan(maxAge));
 
 		} else {
 			downloadStrategy = DownloadStrategyIfNotCached.INSTANCE;
@@ -302,13 +305,13 @@ public class PostListingFragment extends RRFragment
 
 						// Request the subreddit data
 
-						final RequestResponseHandler<RedditSubreddit, SubredditRequestFailure>
+						final RequestResponseHandler<RedditSubreddit, RRError>
 								subredditHandler = new RequestResponseHandler<
 								RedditSubreddit,
-								SubredditRequestFailure>() {
+								RRError>() {
 							@Override
 							public void onRequestFailed(
-									final SubredditRequestFailure failureReason) {
+									final RRError failureReason) {
 								// Ignore
 								AndroidCommon.UI_THREAD_HANDLER.post(() ->
 										CacheManager.getInstance(context).makeRequest(mRequest));
@@ -317,7 +320,7 @@ public class PostListingFragment extends RRFragment
 							@Override
 							public void onRequestSuccess(
 									final RedditSubreddit result,
-									final long timeCached) {
+									final TimestampUTC timeCached) {
 								AndroidCommon.UI_THREAD_HANDLER.post(() -> {
 									mSubreddit = result;
 
@@ -471,6 +474,19 @@ public class PostListingFragment extends RRFragment
 				subreddit);
 
 		setHeader(postListingHeader);
+
+		if(subreddit != null) {
+			postListingHeader.setOnLongClickListener(view -> {
+				try {
+					MainMenuListingManager.showActionMenu(
+							getActivity(),
+							subreddit.getCanonicalId());
+				} catch (final InvalidSubredditNameException e) {
+					throw new RuntimeException(e);
+				}
+				return true;
+			});
+		}
 	}
 
 	private void setHeader(final View view) {
@@ -525,8 +541,8 @@ public class PostListingFragment extends RRFragment
 				final Uri newUri = mPostListingURL.after(mAfter).generateJsonUri();
 
 				// TODO customise (currently 3 hrs)
-				final DownloadStrategy strategy = (RRTime.since(mTimestamp)
-						< 3 * 60 * 60 * 1000)
+				final DownloadStrategy strategy = mTimestamp.elapsed()
+								.isLessThan(TimeDuration.hours(3))
 						? DownloadStrategyIfNotCached.INSTANCE
 						: DownloadStrategyNever.INSTANCE;
 
@@ -647,34 +663,38 @@ public class PostListingFragment extends RRFragment
 				Constants.FileType.POST_LIST,
 				CacheRequest.DOWNLOAD_QUEUE_REDDIT_API,
 				activity,
-				new CacheRequestJSONParser(activity, new CacheRequestJSONParser.Listener() {
-
+				new CacheRequestCallbacks() {
 					@Override
-					public void onJsonParsed(
-							@NonNull final JsonValue value,
-							final long timestamp,
+					public void onDataStreamComplete(
+							@NonNull final GenericFactory<SeekableInputStream, IOException>
+									streamFactory,
+							final TimestampUTC timestamp,
 							@NonNull final UUID session,
-							final boolean fromCache) {
+							final boolean fromCache,
+							@Nullable final String mimetype) {
 
 						final BaseActivity activity = (BaseActivity)getActivity();
 
 						// One hour (matches default refresh value)
-						if(firstDownload && fromCache && RRTime.since(timestamp) > 60 * 60 * 1000) {
-							AndroidCommon.UI_THREAD_HANDLER.post(() -> {
+						if(firstDownload && fromCache) {
+							if (timestamp.elapsedPeriod()
+									.asDuration().isGreaterThan(TimeDuration.hours(1))) {
+								AndroidCommon.UI_THREAD_HANDLER.post(() -> {
 
-								final TextView cacheNotif
-										= (TextView)LayoutInflater.from(activity).inflate(
-										R.layout.cached_header,
-										null,
-										false);
+									final TextView cacheNotif
+											= (TextView) LayoutInflater.from(activity).inflate(
+											R.layout.cached_header,
+											null,
+											false);
 
-								cacheNotif.setText(getActivity().getString(
-										R.string.listing_cached,
-										RRTime.formatDateTime(timestamp, getActivity())));
+									cacheNotif.setText(getActivity().getString(
+											R.string.listing_cached,
+											timestamp.format()));
 
-								mPostListingManager.addNotification(cacheNotif);
-							});
-						} // TODO resuming a copy
+									mPostListingManager.addNotification(cacheNotif);
+								});
+							} // TODO resuming a copy
+						}
 
 						if(firstDownload) {
 							((SessionChangeListener)activity).onSessionChanged(
@@ -689,9 +709,18 @@ public class PostListingFragment extends RRFragment
 
 						try {
 
-							final JsonObject thing = value.asObject();
-							final JsonObject listing = thing.getObject("data");
-							final JsonArray posts = listing.getArray("children");
+							final RedditThing thing = JsonUtils.INSTANCE
+									.decodeRedditThingFromStream(streamFactory.create());
+
+							if(!(thing instanceof RedditThing.Listing)) {
+								throw new RuntimeException("Expected listing, got "
+										+ thing.getClass().getName());
+							}
+
+							final RedditListing listing = ((RedditThing.Listing)thing).getData();
+
+							final ArrayList<MaybeParseError<RedditThing>> posts
+									= listing.getChildren();
 
 							final boolean isNsfwAllowed = PrefsUtility.pref_behaviour_nsfw();
 
@@ -728,9 +757,9 @@ public class PostListingFragment extends RRFragment
 
 							final boolean precacheImages
 									= !inlinePreviews
-											&& PrefsUtility.cache_precache_images()
+									&& PrefsUtility.cache_precache_images()
 									.isEnabled(isConnectionWifi)
-											&& !FileUtils.isCacheDiskFull(activity);
+									&& !FileUtils.isCacheDiskFull(activity);
 
 							final boolean precacheComments = PrefsUtility.cache_precache_comments()
 									.isEnabled(isConnectionWifi);
@@ -749,15 +778,15 @@ public class PostListingFragment extends RRFragment
 
 							final boolean subredditFilteringEnabled =
 									mPostListingURL.pathType()
-													== RedditURLParser.SUBREDDIT_POST_LISTING_URL
+											== RedditURLParser.SUBREDDIT_POST_LISTING_URL
 											&& (mPostListingURL.asSubredditPostListURL().type
-													== SubredditPostListURL.Type.ALL
+											== SubredditPostListURL.Type.ALL
 											|| mPostListingURL.asSubredditPostListURL().type
-													== SubredditPostListURL.Type.ALL_SUBTRACTION
+											== SubredditPostListURL.Type.ALL_SUBTRACTION
 											|| mPostListingURL.asSubredditPostListURL().type
-													== SubredditPostListURL.Type.POPULAR
+											== SubredditPostListURL.Type.POPULAR
 											|| mPostListingURL.asSubredditPostListURL().type
-													== SubredditPostListURL.Type.FRONTPAGE);
+											== SubredditPostListURL.Type.FRONTPAGE);
 
 							// Grab this so we don't have to pull from the prefs every post
 							final HashSet<SubredditCanonicalId> blockedSubreddits
@@ -776,41 +805,47 @@ public class PostListingFragment extends RRFragment
 
 							final boolean showSubredditName = !(mPostListingURL != null
 									&& mPostListingURL.pathType()
-											== RedditURLParser.SUBREDDIT_POST_LISTING_URL
+									== RedditURLParser.SUBREDDIT_POST_LISTING_URL
 									&& mPostListingURL.asSubredditPostListURL().type
-											== SubredditPostListURL.Type.SUBREDDIT);
+									== SubredditPostListURL.Type.SUBREDDIT);
 
 							final ArrayList<RedditPostListItem> downloadedPosts
 									= new ArrayList<>(25);
 
-							for(final JsonValue postThingValue : posts) {
+							for(final MaybeParseError<RedditThing> postThingValue : posts) {
 
-								final RedditThing postThing
-										= postThingValue.asObject(RedditThing.class);
-
-								if(!postThing.getKind().equals(RedditThing.Kind.POST)) {
+								if(!(postThingValue instanceof MaybeParseError.Ok)) {
+									// TODO handle this
 									continue;
 								}
 
-								final RedditPost post = postThing.asPost();
+								final RedditThing postThing
+										= ((MaybeParseError.Ok<RedditThing>)postThingValue)
+												.getValue();
 
-								mAfter = post.name;
+								if(!(postThing instanceof RedditThing.Post)) {
+									continue;
+								}
+
+								final RedditPost post = ((RedditThing.Post)postThing).getData();
+
+								mAfter = post.getName();
 
 								final boolean isPostBlocked = subredditFilteringEnabled
 										&& blockedSubreddits.contains(
-												new SubredditCanonicalId(post.subreddit));
+										new SubredditCanonicalId(post.getSubreddit().getDecoded()));
 
 								if(!isPostBlocked
-										&& (!post.over_18 || isNsfwAllowed)
+										&& (!post.getOver_18() || isNsfwAllowed)
 										&& mPostIds.add(post.getIdAlone())) {
 
 									final boolean downloadThisThumbnail = downloadThumbnails
-											&& (!post.over_18 || showNsfwThumbnails)
-											&& (!post.spoiler || showSpoilerThumbnails);
+											&& (!post.getOver_18() || showNsfwThumbnails)
+											&& (!post.getSpoiler() || showSpoilerThumbnails);
 
 									final boolean downloadThisPreview = inlinePreviews
-											&& (!post.over_18 || showNsfwPreviews)
-											&& (!post.spoiler || showSpoilerPreviews);
+											&& (!post.getOver_18() || showNsfwPreviews)
+											&& (!post.getSpoiler() || showSpoilerPreviews);
 
 									final int positionInList = mPostCount;
 
@@ -851,13 +886,7 @@ public class PostListingFragment extends RRFragment
 
 												@Override
 												public void onFailure(
-														final @CacheRequest.RequestFailureType
-																int type,
-														final Throwable t,
-														final Integer status,
-														final String readableMessage,
-														@NonNull final
-																Optional<FailedRequestBody> body) {
+														@NonNull final RRError error) {
 												}
 
 												@Override
@@ -939,56 +968,29 @@ public class PostListingFragment extends RRFragment
 							});
 
 						} catch(final Throwable t) {
-							onFailure(
+							onFailure(General.getGeneralErrorForFailure(
+									activity,
 									CacheRequest.REQUEST_FAILURE_PARSE,
 									t,
 									null,
-									"Parse failure",
-									Optional.of(new FailedRequestBody(value)));
+									url.toString(),
+									FailedRequestBody.from(streamFactory)));
 						}
 					}
 
 					@Override
-					public void onFailure(
-							final int type,
-							@Nullable final Throwable t,
-							@Nullable final Integer httpStatus,
-							@Nullable final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> body) {
+					public void onFailure(@NonNull final RRError error) {
 
 						AndroidCommon.UI_THREAD_HANDLER.post(() -> {
 
 							mPostListingManager.setLoadingVisible(false);
-
-							final RRError error;
-
-							if(type == CacheRequest.REQUEST_FAILURE_CACHE_MISS) {
-								error = new RRError(
-										activity.getString(R.string.error_postlist_cache_title),
-										activity.getString(R.string.error_postlist_cache_message),
-										false,
-										t,
-										httpStatus,
-										url.toString(),
-										readableMessage,
-										body);
-
-							} else {
-								error = General.getGeneralErrorForFailure(
-										activity,
-										type,
-										t,
-										httpStatus,
-										url.toString(),
-										body);
-							}
 
 							mPostListingManager.addFooterError(new ErrorView(
 									activity,
 									error));
 						});
 					}
-				}));
+				});
 	}
 
 	private void precacheComments(
@@ -1017,27 +1019,22 @@ public class PostListingFragment extends RRFragment
 								Constants.Priority.COMMENT_PRECACHE,
 							positionInList),
 						new DownloadStrategyIfTimestampOutsideBounds(
-								TimestampBound.notOlderThan(RRTime.minsToMs(15))),
+								TimestampBound.notOlderThan(TimeDuration.minutes(15))),
 						Constants.FileType.COMMENT_LIST,
 						CacheRequest.DOWNLOAD_QUEUE_REDDIT_API,
 						// Don't parse the JSON
 						activity,
 						new CacheRequestCallbacks() {
 							@Override
-							public void onFailure(
-									final int type,
-									@Nullable final Throwable t,
-									@Nullable final Integer httpStatus,
-									@Nullable final String readableMessage,
-									@NonNull final Optional<FailedRequestBody> body) {
+							public void onFailure(@NonNull final RRError error) {
 
 								if(General.isSensitiveDebugLoggingEnabled()) {
 									Log.e(
 											TAG,
 											"Failed to precache "
-													+ url.toString()
-													+ "(RequestFailureType code: "
-													+ type
+													+ url
+													+ " ("
+													+ error
 													+ ")");
 								}
 							}
@@ -1045,7 +1042,7 @@ public class PostListingFragment extends RRFragment
 							@Override
 							public void onCacheFileWritten(
 									@NonNull final CacheManager.ReadableCacheFile cacheFile,
-									final long timestamp,
+									final TimestampUTC timestamp,
 									@NonNull final UUID session,
 									final boolean fromCache,
 									@Nullable final String mimetype) {
@@ -1151,29 +1148,21 @@ public class PostListingFragment extends RRFragment
 				activity,
 				new CacheRequestCallbacks() {
 					@Override
-					public void onFailure(
-							final int type,
-							@Nullable final Throwable t,
-							@Nullable final Integer httpStatus,
-							@Nullable final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> body) {
+					public void onFailure(@NonNull final RRError error) {
 
 						if(General.isSensitiveDebugLoggingEnabled()) {
 							Log.e(TAG, String.format(
 									Locale.US,
-									"Failed to precache %s (RequestFailureType %d,"
-											+ " status %s, readable '%s')",
+									"Failed to precache %s (%s)",
 									url,
-									type,
-									httpStatus == null ? "NULL" : httpStatus.toString(),
-									readableMessage == null ? "NULL" : readableMessage));
+									error));
 						}
 					}
 
 					@Override
 					public void onCacheFileWritten(
 							@NonNull final CacheManager.ReadableCacheFile cacheFile,
-							final long timestamp,
+							final TimestampUTC timestamp,
 							@NonNull final UUID session,
 							final boolean fromCache,
 							@Nullable final String mimetype) {

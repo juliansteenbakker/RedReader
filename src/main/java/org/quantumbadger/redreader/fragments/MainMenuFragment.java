@@ -35,10 +35,11 @@ import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.RRError;
 import org.quantumbadger.redreader.common.TimestampBound;
+import org.quantumbadger.redreader.common.time.TimeDuration;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.io.RequestResponseHandler;
 import org.quantumbadger.redreader.reddit.api.RedditMultiredditSubscriptionManager;
 import org.quantumbadger.redreader.reddit.api.RedditSubredditSubscriptionManager;
-import org.quantumbadger.redreader.reddit.api.SubredditRequestFailure;
 import org.quantumbadger.redreader.reddit.things.SubredditCanonicalId;
 import org.quantumbadger.redreader.reddit.url.PostListingURL;
 import org.quantumbadger.redreader.views.ScrollbarRecyclerViewManager;
@@ -69,7 +70,8 @@ public class MainMenuFragment extends RRFragment implements
 	public static final int MENU_MENU_ACTION_RANDOM = 12;
 	public static final int MENU_MENU_ACTION_RANDOM_NSFW = 13;
 	public static final int MENU_MENU_ACTION_SENT_MESSAGES = 14;
-	public static final int MENU_MENU_ACTION_SETTINGS = 15;
+	public static final int MENU_MENU_ACTION_SETTINGS = 16;
+	public static final int MENU_MENU_ACTION_FIND_SUBREDDIT = 15;
 
 	@IntDef({
 			MENU_MENU_ACTION_FRONTPAGE,
@@ -86,8 +88,9 @@ public class MainMenuFragment extends RRFragment implements
 			MENU_MENU_ACTION_POPULAR,
 			MENU_MENU_ACTION_RANDOM,
 			MENU_MENU_ACTION_RANDOM_NSFW,
+			MENU_MENU_ACTION_SETTINGS,
 			MENU_MENU_ACTION_SENT_MESSAGES,
-			MENU_MENU_ACTION_SETTINGS})
+			MENU_MENU_ACTION_FIND_SUBREDDIT})
 	@Retention(RetentionPolicy.SOURCE)
 	public @interface MainMenuAction {
 	}
@@ -147,17 +150,17 @@ public class MainMenuFragment extends RRFragment implements
 
 		if(force) {
 			multiredditSubscriptionManager.triggerUpdate(
-					new RequestResponseHandler<HashSet<String>, SubredditRequestFailure>() {
+					new RequestResponseHandler<HashSet<String>, RRError>() {
 
 						@Override
-						public void onRequestFailed(final SubredditRequestFailure failureReason) {
-							onMultiredditError(failureReason.asError(context));
+						public void onRequestFailed(final RRError failureReason) {
+							onMultiredditError(failureReason);
 						}
 
 						@Override
 						public void onRequestSuccess(
 								final HashSet<String> result,
-								final long timeCached) {
+								final TimestampUTC timeCached) {
 
 							multiredditSubscriptionManager.addListener(MainMenuFragment.this);
 							onMultiredditSubscriptionsChanged(result);
@@ -167,16 +170,16 @@ public class MainMenuFragment extends RRFragment implements
 			subredditSubscriptionManager.triggerUpdate(
 					new RequestResponseHandler<
 							HashSet<SubredditCanonicalId>,
-							SubredditRequestFailure>() {
+							RRError>() {
 						@Override
-						public void onRequestFailed(final SubredditRequestFailure failureReason) {
-							onSubredditError(failureReason.asError(context));
+						public void onRequestFailed(final RRError failureReason) {
+							onSubredditError(failureReason);
 						}
 
 						@Override
 						public void onRequestSuccess(
 								final HashSet<SubredditCanonicalId> result,
-								final long timeCached) {
+								final TimestampUTC timeCached) {
 							subredditSubscriptionManager.addListener(MainMenuFragment.this);
 							onSubredditSubscriptionsChanged(result);
 						}
@@ -198,7 +201,7 @@ public class MainMenuFragment extends RRFragment implements
 			}
 
 			final TimestampBound.MoreRecentThanBound oneHour
-					= TimestampBound.notOlderThan(1000 * 60 * 60);
+					= TimestampBound.notOlderThan(TimeDuration.hours(1));
 			multiredditSubscriptionManager.triggerUpdate(null, oneHour);
 			subredditSubscriptionManager.triggerUpdate(null, oneHour);
 		}
@@ -209,7 +212,7 @@ public class MainMenuFragment extends RRFragment implements
 	}
 
 	public enum MainMenuShortcutItems {
-		FRONTPAGE, POPULAR, ALL, CUSTOM, RANDOM, RANDOM_NSFW
+		FRONTPAGE, POPULAR, ALL, SUBREDDIT_SEARCH, CUSTOM, RANDOM, RANDOM_NSFW
 	}
 
 	@Override

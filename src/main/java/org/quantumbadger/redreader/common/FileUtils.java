@@ -45,8 +45,8 @@ import org.quantumbadger.redreader.cache.CacheManager;
 import org.quantumbadger.redreader.cache.CacheRequest;
 import org.quantumbadger.redreader.cache.CacheRequestCallbacks;
 import org.quantumbadger.redreader.cache.downloadstrategy.DownloadStrategyIfNotCached;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.fragments.ShareOrderDialog;
-import org.quantumbadger.redreader.http.FailedRequestBody;
 import org.quantumbadger.redreader.image.GetImageInfoListener;
 import org.quantumbadger.redreader.image.ImageInfo;
 import org.quantumbadger.redreader.image.LegacySaveImageCallback;
@@ -223,7 +223,11 @@ public class FileUtils {
 
 	public static void shareImageAtUri(
 			@NonNull final BaseActivity activity,
-			@NonNull final String uri) {
+			@Nullable final String uri) {
+
+		if(uri == null) {
+			return;
+		}
 
 		downloadImageToSave(activity, uri, (info, cacheFile, mimetype) -> {
 
@@ -408,7 +412,11 @@ public class FileUtils {
 
 	public static void saveImageAtUri(
 			@NonNull final BaseActivity activity,
-			@NonNull final String uri) {
+			@Nullable final String uri) {
+
+		if(uri == null) {
+			return;
+		}
 
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 
@@ -534,28 +542,14 @@ public class FileUtils {
 					}
 
 					@Override
-					public void onFailure(
-							@CacheRequest.RequestFailureType final int type,
-							final Throwable t,
-							final Integer status,
-							final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> body) {
-
-						General.showResultDialog(
-								activity,
-								General.getGeneralErrorForFailure(
-										activity,
-										type,
-										t,
-										status,
-										info.urlAudioStream,
-										body));
+					public void onFailure(@NonNull final RRError error) {
+						General.showResultDialog(activity, error);
 					}
 
 					@Override
 					public void onCacheFileWritten(
 							@NonNull final CacheManager.ReadableCacheFile cacheFile,
-							final long timestamp,
+							final TimestampUTC timestamp,
 							@NonNull final UUID session,
 							final boolean fromCache,
 							final String mimetype) {
@@ -646,19 +640,7 @@ public class FileUtils {
 				new GetImageInfoListener() {
 
 					@Override
-					public void onFailure(
-							final @CacheRequest.RequestFailureType int type,
-							final Throwable t,
-							final Integer status,
-							final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> body) {
-						final RRError error = General.getGeneralErrorForFailure(
-								activity,
-								type,
-								t,
-								status,
-								uri,
-								body);
+					public void onFailure(@NonNull final RRError error) {
 						General.showResultDialog(activity, error);
 					}
 
@@ -684,28 +666,14 @@ public class FileUtils {
 									}
 
 									@Override
-									public void onFailure(
-											@CacheRequest.RequestFailureType final int type,
-											final Throwable t,
-											final Integer status,
-											final String readableMessage,
-											@NonNull final Optional<FailedRequestBody> body) {
-
-										General.showResultDialog(
-												activity,
-												General.getGeneralErrorForFailure(
-														activity,
-														type,
-														t,
-														status,
-														info.urlOriginal,
-														body));
+									public void onFailure(@NonNull final RRError error) {
+										General.showResultDialog(activity, error);
 									}
 
 									@Override
 									public void onCacheFileWritten(
 											@NonNull final CacheManager.ReadableCacheFile cacheFile,
-											final long timestamp,
+											final TimestampUTC timestamp,
 											@NonNull final UUID session,
 											final boolean fromCache,
 											final String mimetype) {

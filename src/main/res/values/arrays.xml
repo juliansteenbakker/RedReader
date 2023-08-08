@@ -832,6 +832,7 @@
 		<item>@string/mainmenu_frontpage</item>
 		<item>@string/mainmenu_popular</item>
 		<item>@string/mainmenu_all</item>
+		<item>@string/find_location</item>
 		<item>@string/mainmenu_custom_destination</item>
 		<item>@string/mainmenu_random</item>
 		<item>@string/mainmenu_random_nsfw</item>
@@ -842,6 +843,7 @@
 		<item>frontpage</item>
 		<item>popular</item>
 		<item>all</item>
+		<item>subreddit_search</item>
 		<item>custom</item>
 		<item>random</item>
 		<item>random_nsfw</item>
@@ -851,6 +853,7 @@
 	<string-array name="pref_menus_mainmenu_shortcutitems_items_default">
 		<item>frontpage</item>
 		<item>all</item>
+		<item>subreddit_search</item>
 		<item>custom</item>
 	</string-array>
 
@@ -860,6 +863,8 @@
 		<item>@string/pref_appearance_comment_header_items_author</item>
 		<item>@string/pref_appearance_comment_header_items_flair</item>
 		<item>@string/pref_appearance_comment_header_items_score</item>
+		<item>@string/pref_appearance_post_subtitle_items_upvote_ratio</item>
+		<item>@string/pref_appearance_post_subtitle_items_comments</item>
 		<item>@string/pref_appearance_comment_header_items_age</item>
 		<item>@string/pref_appearance_comment_header_items_gold</item>
 		<item>@string/pref_appearance_post_subtitle_items_subreddit</item>
@@ -874,6 +879,8 @@
 		<item>author</item>
 		<item>flair</item>
 		<item>score</item>
+		<item>upvote_ratio</item>
+		<item>comments</item>
 		<item>age</item>
 		<item>gold</item>
 		<item>subreddit</item>
@@ -1267,6 +1274,21 @@
 		<item>always_hide</item>
 		<item>hide_on_media</item>
 		<item>never_hide</item>
+	</string-array>
+
+	<!-- 2022-03-25 -->
+
+	<string-array name="pref_behaviour_collapse_sticky_comments_items">
+		<item>@string/pref_behaviour_collapse_sticky_comments_option_always</item>
+		<item>@string/pref_behaviour_collapse_sticky_comments_option_only_bots</item>
+		<item>@string/pref_behaviour_collapse_sticky_comments_option_never</item>
+	</string-array>
+
+	<!-- Constants. Do not change. -->
+	<string-array name="pref_behaviour_collapse_sticky_comments_items_return">
+		<item>always</item>
+		<item>only_bots</item>
+		<item>never</item>
 	</string-array>
 
 </resources>

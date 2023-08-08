@@ -25,26 +25,24 @@ import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.ScrollView;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.cache.CacheManager;
 import org.quantumbadger.redreader.common.AndroidCommon;
 import org.quantumbadger.redreader.common.General;
-import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.RRError;
 import org.quantumbadger.redreader.fragments.MarkdownPreviewDialog;
-import org.quantumbadger.redreader.http.FailedRequestBody;
 import org.quantumbadger.redreader.reddit.APIResponseHandler;
 import org.quantumbadger.redreader.reddit.RedditAPI;
+import org.quantumbadger.redreader.reddit.kthings.RedditIdAndType;
 
 public class CommentEditActivity extends BaseActivity {
 
 	private EditText textEdit;
 
-	private String commentIdAndType = null;
+	private RedditIdAndType commentIdAndType = null;
 	private boolean isSelfPost = false;
 
 	@Override
@@ -64,13 +62,15 @@ public class CommentEditActivity extends BaseActivity {
 		textEdit = (EditText)getLayoutInflater().inflate(R.layout.comment_edit, null);
 
 		if(getIntent() != null && getIntent().hasExtra("commentIdAndType")) {
-			commentIdAndType = getIntent().getStringExtra("commentIdAndType");
+			//noinspection deprecation
+			commentIdAndType = getIntent().getParcelableExtra("commentIdAndType");
 			textEdit.setText(getIntent().getStringExtra("commentText"));
 
 		} else if(savedInstanceState != null && savedInstanceState.containsKey(
 				"commentIdAndType")) {
 			textEdit.setText(savedInstanceState.getString("commentText"));
-			commentIdAndType = savedInstanceState.getString("commentIdAndType");
+			//noinspection deprecation
+			commentIdAndType = savedInstanceState.getParcelable("commentIdAndType");
 		}
 
 		final ScrollView sv = new ScrollView(this);
@@ -82,7 +82,7 @@ public class CommentEditActivity extends BaseActivity {
 	protected void onSaveInstanceState(@NonNull final Bundle outState) {
 		super.onSaveInstanceState(outState);
 		outState.putString("commentText", textEdit.getText().toString());
-		outState.putString("commentIdAndType", commentIdAndType);
+		outState.putParcelable("commentIdAndType", commentIdAndType);
 	}
 
 	@Override
@@ -152,37 +152,7 @@ public class CommentEditActivity extends BaseActivity {
 				}
 
 				@Override
-				protected void onFailure(
-						final int type,
-						@Nullable final Throwable t,
-						@Nullable final Integer httpStatus,
-						@Nullable final String readableMessage,
-						@NonNull final Optional<FailedRequestBody> response) {
-
-					final RRError error = General.getGeneralErrorForFailure(
-							context,
-							type,
-							t,
-							httpStatus,
-							"Comment edit",
-							response);
-
-					General.showResultDialog(CommentEditActivity.this, error);
-					General.safeDismissDialog(progressDialog);
-				}
-
-				@Override
-				protected void onFailure(
-						@NonNull final APIFailureType type,
-						@Nullable final String debuggingContext,
-						@NonNull final Optional<FailedRequestBody> response) {
-
-					final RRError error = General.getGeneralErrorForFailure(
-							context,
-							type,
-							debuggingContext,
-							response);
-
+				protected void onFailure(@NonNull final RRError error) {
 					General.showResultDialog(CommentEditActivity.this, error);
 					General.safeDismissDialog(progressDialog);
 				}

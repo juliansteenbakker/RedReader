@@ -29,13 +29,14 @@ import androidx.annotation.StringRes;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.activities.OptionsMenuUtility;
 import org.quantumbadger.redreader.adapters.MainMenuListingManager;
+import org.quantumbadger.redreader.common.time.TimeDuration;
 import org.quantumbadger.redreader.fragments.MainMenuFragment;
 import org.quantumbadger.redreader.io.WritableHashSet;
 import org.quantumbadger.redreader.reddit.PostCommentSort;
 import org.quantumbadger.redreader.reddit.PostSort;
 import org.quantumbadger.redreader.reddit.UserCommentSort;
 import org.quantumbadger.redreader.reddit.api.RedditAPICommentAction;
-import org.quantumbadger.redreader.reddit.prepared.RedditPreparedPost;
+import org.quantumbadger.redreader.reddit.api.RedditPostActions;
 import org.quantumbadger.redreader.reddit.things.InvalidSubredditNameException;
 import org.quantumbadger.redreader.reddit.things.SubredditCanonicalId;
 
@@ -55,11 +56,6 @@ public final class PrefsUtility {
 
 	private static SharedPrefsWrapper sharedPrefs;
 	private static Resources mRes;
-
-	public static void init(final Context context) {
-		sharedPrefs = General.getSharedPrefs(context);
-		mRes = Objects.requireNonNull(context.getResources());
-	}
 
 	private static String getPrefKey(@StringRes final int prefKey) {
 		return mRes.getString(prefKey);
@@ -129,7 +125,17 @@ public final class PrefsUtility {
 				|| key.equals(context.getString(
 						R.string.pref_accessibility_min_comment_height_key))
 				|| key.equals(context.getString(
-						R.string.pref_behaviour_post_title_opens_comments_key));
+						R.string.pref_behaviour_post_title_opens_comments_key))
+				|| key.equals(context.getString(
+						R.string.pref_accessibility_say_comment_indent_level_key))
+				|| key.equals(context.getString(
+						R.string.pref_behaviour_collapse_sticky_comments_key))
+				|| key.equals(context.getString(
+						R.string.pref_accessibility_concise_mode_key))
+				|| key.equals(context.getString(
+						R.string.pref_appearance_post_hide_subreddit_header_key))
+				|| key.equals(REDDIT_USER_AGREEMENT_PREF)
+				|| key.equals(context.getString(R.string.pref_reddit_client_id_override_key));
 	}
 
 	public static boolean isRestartRequired(final Context context, final String key) {
@@ -151,7 +157,20 @@ public final class PrefsUtility {
 				|| context.getString(R.string.pref_menus_mainmenu_dev_announcements_key).equals(key)
 				|| context.getString(R.string.pref_appearance_bottom_toolbar_key).equals(key)
 				|| context.getString(R.string.pref_appearance_hide_toolbar_on_scroll_key)
-						.equals(key);
+						.equals(key)
+				|| context.getString(R.string.pref_behaviour_block_screenshots_key).equals(key)
+				|| context.getString(R.string.pref_behaviour_keep_screen_awake_key).equals(key);
+	}
+
+	public static void init(final Context context) {
+
+		ConfigProviders.register(() -> "IJuC7OVo2SgR0QVvEZXr913LYMKU4r7pTqrmPe3MpddGEB+YheeH3jTZ+" +
+				"GbEQgpSutsgJugRCPETQGRwkZrw1LJxR93RpgC1iO+G/hN9BaPU1c0Qt33SSMzHCqLzU66dpD/L0yC42" +
+				"GhcJF+GUAaRzCnk0BxPjN09aO2H5rQPnUGB1kurxxCExKzWy4gEyWokgYzGGNQwAA==");
+
+		sharedPrefs = General.getSharedPrefs(context);
+		mRes = Objects.requireNonNull(context.getResources());
+		General.initAppConfig(context);
 	}
 
 	///////////////////////////////
@@ -164,6 +183,7 @@ public final class PrefsUtility {
 		NEVER, AUTO, FORCE
 	}
 
+	@NonNull
 	public static AppearanceTwopane appearance_twopane() {
 		return AppearanceTwopane.valueOf(StringUtils.asciiUppercase(getString(
 				R.string.pref_appearance_twopane_key,
@@ -524,6 +544,12 @@ public final class PrefsUtility {
 				false);
 	}
 
+	public static boolean pref_appearance_post_hide_subreddit_header() {
+		return getBoolean(
+				R.string.pref_appearance_post_hide_subreddit_header_key,
+				false);
+	}
+
 	public static boolean pref_appearance_hide_headertoolbar_postlist() {
 		return getBoolean(
 				R.string.pref_appearance_hide_headertoolbar_postlist_key,
@@ -537,7 +563,18 @@ public final class PrefsUtility {
 	}
 
 	public enum AppearancePostSubtitleItem {
-		AUTHOR, FLAIR, SCORE, AGE, GOLD, SUBREDDIT, DOMAIN, STICKY, SPOILER, NSFW
+		AUTHOR,
+		FLAIR,
+		SCORE,
+		AGE,
+		GOLD,
+		SUBREDDIT,
+		DOMAIN,
+		STICKY,
+		SPOILER,
+		NSFW,
+		UPVOTE_RATIO,
+		COMMENTS
 	}
 
 	public static EnumSet<AppearancePostSubtitleItem> appearance_post_subtitle_items() {
@@ -642,6 +679,12 @@ public final class PrefsUtility {
 
 	public enum CommentAgeMode {
 		ABSOLUTE, RELATIVE_POST, RELATIVE_PARENT
+	}
+
+	public static boolean appearance_user_show_avatars() {
+		return getBoolean(
+				R.string.pref_appearance_user_show_avatars_key,
+				true);
 	}
 
 	public static CommentAgeMode appearance_comment_age_mode() {
@@ -1112,6 +1155,12 @@ public final class PrefsUtility {
 				StringUtils.asciiLowercase(SaveLocation.PROMPT_EVERY_TIME.name()))));
 	}
 
+	public static boolean behaviour_block_screenshots() {
+		return getBoolean(
+				R.string.pref_behaviour_block_screenshots_key,
+				false);
+	}
+
 	///////////////////////////////
 	// pref_cache
 	///////////////////////////////
@@ -1136,31 +1185,27 @@ public final class PrefsUtility {
 				.apply();
 	}
 
-	public static long pref_cache_rerequest_postlist_age_ms() {
+	public static TimeDuration pref_cache_rerequest_postlist_age() {
 		try {
 			final int hours = Integer.parseInt(
 					getString(
 							R.string.pref_cache_rerequest_postlist_age_key,
 							"1"));
 
-			return General.hoursToMs(hours);
+			return TimeDuration.hours(hours);
 
 		} catch(final Throwable e) {
-			return 1;
+			return TimeDuration.hours(1);
 		}
 	}
 
 	// pref_cache_maxage
 
-	public static HashMap<Integer, Long> createFileTypeToLongMap() {
-		return createFileTypeToLongMap(0, 0, 0);
-	}
-
-	public static HashMap<Integer, Long> createFileTypeToLongMap(
-			final long listings,
-			final long thumbnails,
-			final long images) {
-		final HashMap<Integer, Long> maxAgeMap = new HashMap<>(10);
+	public static <E> HashMap<Integer, E> createFileTypeMap(
+			final E listings,
+			final E thumbnails,
+			final E images) {
+		final HashMap<Integer, E> maxAgeMap = new HashMap<>(10);
 
 		maxAgeMap.put(Constants.FileType.POST_LIST, listings);
 		maxAgeMap.put(Constants.FileType.COMMENT_LIST, listings);
@@ -1177,37 +1222,30 @@ public final class PrefsUtility {
 		return maxAgeMap;
 	}
 
-	public static HashMap<Integer, Long> pref_cache_maxage() {
+	public static HashMap<Integer, TimeDuration> pref_cache_maxage() {
 
-		final long maxAgeListing = 1000L
-				* 60L
-				* 60L
-				* Long.parseLong(getString(
+		final TimeDuration maxAgeListing
+				= TimeDuration.hours(Long.parseLong(getString(
 				R.string.pref_cache_maxage_listing_key,
-				"168"));
-		final long maxAgeThumb = 1000L
-				* 60L
-				* 60L
-				* Long.parseLong(getString(
-				R.string.pref_cache_maxage_thumb_key,
-				"168"));
-		final long maxAgeImage = 1000L
-				* 60L
-				* 60L
-				* Long.parseLong(getString(
-				R.string.pref_cache_maxage_image_key,
-				"72"));
+				"168")));
 
-		return createFileTypeToLongMap(maxAgeListing, maxAgeThumb, maxAgeImage);
+		final TimeDuration maxAgeThumb
+				= TimeDuration.hours(Long.parseLong(getString(
+				R.string.pref_cache_maxage_thumb_key,
+				"168")));
+
+		final TimeDuration maxAgeImage
+				= TimeDuration.hours(Long.parseLong(getString(
+				R.string.pref_cache_maxage_image_key,
+				"72")));
+
+		return createFileTypeMap(maxAgeListing, maxAgeThumb, maxAgeImage);
 	}
 
-	public static Long pref_cache_maxage_entry() {
-		return 1000L
-				* 60L
-				* 60L
-				* Long.parseLong(getString(
+	public static TimeDuration pref_cache_maxage_entry() {
+		return TimeDuration.hours(Long.parseLong(getString(
 				R.string.pref_cache_maxage_entry_key,
-				"168"));
+				"168")));
 	}
 
 	// pref_cache_precache_images
@@ -1276,31 +1314,31 @@ public final class PrefsUtility {
 	// pref_menus
 	///////////////////////////////
 
-	public static EnumSet<RedditPreparedPost.Action> pref_menus_post_context_items() {
+	public static EnumSet<RedditPostActions.Action> pref_menus_post_context_items() {
 
 		final Set<String> strings = getStringSet(
 				R.string.pref_menus_post_context_items_key,
 				R.array.pref_menus_post_context_items_return);
 
-		final EnumSet<RedditPreparedPost.Action> result = EnumSet.noneOf(
-				RedditPreparedPost.Action.class);
+		final EnumSet<RedditPostActions.Action> result = EnumSet.noneOf(
+				RedditPostActions.Action.class);
 		for(final String s : strings) {
-			result.add(RedditPreparedPost.Action.valueOf(StringUtils.asciiUppercase(s)));
+			result.add(RedditPostActions.Action.valueOf(StringUtils.asciiUppercase(s)));
 		}
 
 		return result;
 	}
 
-	public static EnumSet<RedditPreparedPost.Action> pref_menus_post_toolbar_items() {
+	public static EnumSet<RedditPostActions.Action> pref_menus_post_toolbar_items() {
 
 		final Set<String> strings = getStringSet(
 				R.string.pref_menus_post_toolbar_items_key,
 				R.array.pref_menus_post_toolbar_items_return);
 
-		final EnumSet<RedditPreparedPost.Action> result = EnumSet.noneOf(
-				RedditPreparedPost.Action.class);
+		final EnumSet<RedditPostActions.Action> result = EnumSet.noneOf(
+				RedditPostActions.Action.class);
 		for(final String s : strings) {
-			result.add(RedditPreparedPost.Action.valueOf(StringUtils.asciiUppercase(s)));
+			result.add(RedditPostActions.Action.valueOf(StringUtils.asciiUppercase(s)));
 		}
 
 		return result;
@@ -1363,8 +1401,8 @@ public final class PrefsUtility {
 		final EnumSet<MainMenuFragment.MainMenuShortcutItems> result = EnumSet.noneOf(
 				MainMenuFragment.MainMenuShortcutItems.class);
 		for(final String s : strings) {
-			result.add(MainMenuFragment.MainMenuShortcutItems.valueOf(StringUtils.asciiUppercase(
-					s)));
+			result.add(MainMenuFragment.MainMenuShortcutItems.valueOf(
+					StringUtils.asciiUppercase(s)));
 		}
 
 		return result;
@@ -1631,7 +1669,7 @@ public final class PrefsUtility {
 	public static boolean pref_accessibility_separate_body_text_lines() {
 		return getBoolean(
 				R.string.pref_accessibility_separate_body_text_lines_key,
-				false);
+				true);
 	}
 
 	public static int pref_accessibility_min_comment_height() {
@@ -1642,5 +1680,79 @@ public final class PrefsUtility {
 		} catch(final Throwable e) {
 			return 0;
 		}
+	}
+
+	public static boolean pref_accessibility_say_comment_indent_level() {
+		return getBoolean(
+				R.string.pref_accessibility_say_comment_indent_level_key,
+				true);
+	}
+
+	public enum BehaviourCollapseStickyComments {
+		ALWAYS, ONLY_BOTS, NEVER
+	}
+
+	public static BehaviourCollapseStickyComments behaviour_collapse_sticky_comments() {
+		return BehaviourCollapseStickyComments.valueOf(StringUtils.asciiUppercase(getString(
+				R.string.pref_behaviour_collapse_sticky_comments_key,
+				"ONLY_BOTS")));
+	}
+
+	public static boolean pref_accessibility_concise_mode() {
+		return getBoolean(
+				R.string.pref_accessibility_concise_mode_key,
+				false);
+	}
+
+	public static boolean pref_behaviour_keep_screen_awake() {
+		return getBoolean(
+				R.string.pref_behaviour_keep_screen_awake_key,
+				false);
+	}
+
+	@Nullable
+	public static String pref_reddit_client_id_override() {
+		final String value = getString(R.string.pref_reddit_client_id_override_key, null);
+
+		if (value == null) {
+			return null;
+		}
+
+		final String valueTrimmed = value.trim();
+
+		if (valueTrimmed.isEmpty()) {
+			return null;
+		}
+
+		return valueTrimmed;
+	}
+
+	private static final String REDDIT_USER_AGREEMENT_PREF = "accepted_reddit_user_agreement";
+	private static final int REDDIT_USER_AGREEMENT_DECLINED = -1;
+	private static final int REDDIT_USER_AGREEMENT_APRIL_2023 = 1;
+	private static final int REDDIT_USER_AGREEMENT_CURRENT = REDDIT_USER_AGREEMENT_APRIL_2023;
+
+	public static boolean isRedditUserAgreementAccepted() {
+		return sharedPrefs.getInt(REDDIT_USER_AGREEMENT_PREF, 0)
+				>= REDDIT_USER_AGREEMENT_CURRENT;
+	}
+
+	public static boolean isRedditUserAgreementDeclined() {
+		return sharedPrefs.getInt(REDDIT_USER_AGREEMENT_PREF, 0)
+				== REDDIT_USER_AGREEMENT_DECLINED;
+	}
+
+	public static void acceptRedditUserAgreement() {
+		sharedPrefs
+				.edit()
+				.putInt(REDDIT_USER_AGREEMENT_PREF, REDDIT_USER_AGREEMENT_CURRENT)
+				.apply();
+	}
+
+	public static void declineRedditUserAgreement() {
+		sharedPrefs
+				.edit()
+				.putInt(REDDIT_USER_AGREEMENT_PREF, REDDIT_USER_AGREEMENT_DECLINED)
+				.apply();
 	}
 }

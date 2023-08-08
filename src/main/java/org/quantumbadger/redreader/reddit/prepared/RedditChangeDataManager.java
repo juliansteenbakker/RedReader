@@ -19,6 +19,7 @@ package org.quantumbadger.redreader.reddit.prepared;
 
 import android.content.Context;
 import android.util.Log;
+import androidx.annotation.NonNull;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.common.AndroidCommon;
@@ -26,12 +27,15 @@ import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.collections.WeakReferenceListHashMapManager;
 import org.quantumbadger.redreader.common.collections.WeakReferenceListManager;
+import org.quantumbadger.redreader.common.time.TimeDuration;
+import org.quantumbadger.redreader.common.time.TimeStringsDebug;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.io.ExtendedDataInputStream;
 import org.quantumbadger.redreader.io.ExtendedDataOutputStream;
 import org.quantumbadger.redreader.io.RedditChangeDataIO;
-import org.quantumbadger.redreader.reddit.things.RedditComment;
-import org.quantumbadger.redreader.reddit.things.RedditPost;
-import org.quantumbadger.redreader.reddit.things.RedditThingWithIdAndType;
+import org.quantumbadger.redreader.reddit.kthings.RedditComment;
+import org.quantumbadger.redreader.reddit.kthings.RedditIdAndType;
+import org.quantumbadger.redreader.reddit.kthings.RedditPost;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -52,6 +56,7 @@ public final class RedditChangeDataManager {
 	private static final HashMap<RedditAccount, RedditChangeDataManager> INSTANCE_MAP
 			= new HashMap<>();
 
+	@NonNull
 	public static RedditChangeDataManager getInstance(final RedditAccount user) {
 
 		synchronized(INSTANCE_MAP) {
@@ -67,9 +72,9 @@ public final class RedditChangeDataManager {
 		}
 	}
 
-	private static HashMap<RedditAccount, HashMap<String, Entry>> snapshotAllUsers() {
+	private static HashMap<RedditAccount, HashMap<RedditIdAndType, Entry>> snapshotAllUsers() {
 
-		final HashMap<RedditAccount, HashMap<String, Entry>> result = new HashMap<>();
+		final HashMap<RedditAccount, HashMap<RedditIdAndType, Entry>> result = new HashMap<>();
 
 		synchronized(INSTANCE_MAP) {
 			for(final RedditAccount account : INSTANCE_MAP.keySet()) {
@@ -80,31 +85,31 @@ public final class RedditChangeDataManager {
 		return result;
 	}
 
-	public static void writeAllUsers(final ExtendedDataOutputStream dos) throws
-			IOException {
+	public static void writeAllUsers(final ExtendedDataOutputStream dos) throws IOException {
 
 		Log.i(TAG, "Taking snapshot...");
 
-		final HashMap<RedditAccount, HashMap<String, Entry>> data = snapshotAllUsers();
+		final HashMap<RedditAccount, HashMap<RedditIdAndType, Entry>> data = snapshotAllUsers();
 
 		Log.i(TAG, "Writing to stream...");
 
-		final Set<Map.Entry<RedditAccount, HashMap<String, Entry>>> userDataSet =
+		final Set<Map.Entry<RedditAccount, HashMap<RedditIdAndType, Entry>>> userDataSet =
 				data.entrySet();
 
 		dos.writeInt(userDataSet.size());
 
-		for(final Map.Entry<RedditAccount, HashMap<String, Entry>> userData : userDataSet) {
+		for(final Map.Entry<RedditAccount, HashMap<RedditIdAndType, Entry>> userData
+				: userDataSet) {
 
 			final String username = userData.getKey().getCanonicalUsername();
 			dos.writeUTF(username);
 
-			final Set<Map.Entry<String, Entry>> entrySet = userData.getValue().entrySet();
+			final Set<Map.Entry<RedditIdAndType, Entry>> entrySet = userData.getValue().entrySet();
 
 			dos.writeInt(entrySet.size());
 
-			for(final Map.Entry<String, Entry> entry : entrySet) {
-				dos.writeUTF(entry.getKey());
+			for(final Map.Entry<RedditIdAndType, Entry> entry : entrySet) {
+				dos.writeUTF(entry.getKey().getValue());
 				entry.getValue().writeTo(dos);
 			}
 
@@ -147,10 +152,10 @@ public final class RedditChangeDataManager {
 								username));
 			}
 
-			final HashMap<String, Entry> entries = new HashMap<>(entryCount);
+			final HashMap<RedditIdAndType, Entry> entries = new HashMap<>(entryCount);
 
 			for(int j = 0; j < entryCount; j++) {
-				final String thingId = dis.readUTF();
+				final RedditIdAndType thingId = new RedditIdAndType(dis.readUTF());
 				final Entry entry = new Entry(dis);
 				entries.put(thingId, entry);
 			}
@@ -190,7 +195,7 @@ public final class RedditChangeDataManager {
 		pruneAllUsersWhereOlderThan(PrefsUtility.pref_cache_maxage_entry());
 	}
 
-	public static void pruneAllUsersWhereOlderThan(final long maxAge) {
+	public static void pruneAllUsersWhereOlderThan(final TimeDuration maxAge) {
 
 		Log.i(TAG, "Pruning for all users...");
 
@@ -210,12 +215,12 @@ public final class RedditChangeDataManager {
 	}
 
 	public interface Listener {
-		void onRedditDataChange(final String thingIdAndType);
+		void onRedditDataChange(final RedditIdAndType thingIdAndType);
 	}
 
 	private static final class Entry {
 
-		private final long mTimestamp;
+		private final TimestampUTC mTimestamp;
 
 		private final boolean mIsUpvoted;
 		private final boolean mIsDownvoted;
@@ -227,7 +232,7 @@ public final class RedditChangeDataManager {
 		static final Entry CLEAR_ENTRY = new Entry();
 
 		private Entry() {
-			mTimestamp = Long.MIN_VALUE;
+			mTimestamp = TimestampUTC.ZERO;
 			mIsUpvoted = false;
 			mIsDownvoted = false;
 			mIsRead = false;
@@ -236,7 +241,7 @@ public final class RedditChangeDataManager {
 		}
 
 		private Entry(
-				final long timestamp,
+				final TimestampUTC timestamp,
 				final boolean isUpvoted,
 				final boolean isDownvoted,
 				final boolean isRead,
@@ -252,7 +257,7 @@ public final class RedditChangeDataManager {
 		}
 
 		private Entry(final ExtendedDataInputStream dis) throws IOException {
-			mTimestamp = dis.readLong();
+			mTimestamp = TimestampUTC.fromUtcMs(dis.readLong());
 			mIsUpvoted = dis.readBoolean();
 			mIsDownvoted = dis.readBoolean();
 			mIsRead = dis.readBoolean();
@@ -261,7 +266,7 @@ public final class RedditChangeDataManager {
 		}
 
 		private void writeTo(final ExtendedDataOutputStream dos) throws IOException {
-			dos.writeLong(mTimestamp);
+			dos.writeLong(mTimestamp.toUtcMs());
 			dos.writeBoolean(mIsUpvoted);
 			dos.writeBoolean(mIsDownvoted);
 			dos.writeBoolean(mIsRead);
@@ -298,40 +303,40 @@ public final class RedditChangeDataManager {
 		}
 
 		Entry update(
-				final long timestamp,
+				final TimestampUTC timestamp,
 				final RedditComment comment) {
 
-			if(timestamp < mTimestamp) {
+			if(timestamp.isLessThan(mTimestamp)) {
 				return this;
 			}
 
 			return new Entry(
 					timestamp,
-					Boolean.TRUE.equals(comment.likes),
-					Boolean.FALSE.equals(comment.likes),
+					Boolean.TRUE.equals(comment.getLikes()),
+					Boolean.FALSE.equals(comment.getLikes()),
 					false,
-					Boolean.TRUE.equals(comment.saved),
+					comment.getSaved(),
 					mIsHidden); // Use existing value for "collapsed"
 		}
 
 		Entry update(
-				final long timestamp,
+				final TimestampUTC timestamp,
 				final RedditPost post) {
 
-			if(timestamp < mTimestamp) {
+			if(timestamp.isLessThan(mTimestamp)) {
 				return this;
 			}
 
 			return new Entry(
 					timestamp,
-					Boolean.TRUE.equals(post.likes),
-					Boolean.FALSE.equals(post.likes),
-					post.clicked || mIsRead,
-					post.saved,
-					post.hidden ? true : null);
+					Boolean.TRUE.equals(post.getLikes()),
+					Boolean.FALSE.equals(post.getLikes()),
+					post.getClicked() || mIsRead,
+					post.getSaved(),
+					post.getHidden() ? true : null);
 		}
 
-		Entry markUpvoted(final long timestamp) {
+		Entry markUpvoted(final TimestampUTC timestamp) {
 
 			return new Entry(
 					timestamp,
@@ -342,7 +347,7 @@ public final class RedditChangeDataManager {
 					mIsHidden);
 		}
 
-		Entry markDownvoted(final long timestamp) {
+		Entry markDownvoted(final TimestampUTC timestamp) {
 
 			return new Entry(
 					timestamp,
@@ -353,7 +358,7 @@ public final class RedditChangeDataManager {
 					mIsHidden);
 		}
 
-		Entry markUnvoted(final long timestamp) {
+		Entry markUnvoted(final TimestampUTC timestamp) {
 
 			return new Entry(
 					timestamp,
@@ -364,7 +369,7 @@ public final class RedditChangeDataManager {
 					mIsHidden);
 		}
 
-		Entry markRead(final long timestamp) {
+		Entry markRead(final TimestampUTC timestamp) {
 
 			return new Entry(
 					timestamp,
@@ -375,7 +380,7 @@ public final class RedditChangeDataManager {
 					mIsHidden);
 		}
 
-		Entry markSaved(final long timestamp, final boolean isSaved) {
+		Entry markSaved(final TimestampUTC timestamp, final boolean isSaved) {
 
 			return new Entry(
 					timestamp,
@@ -386,7 +391,7 @@ public final class RedditChangeDataManager {
 					mIsHidden);
 		}
 
-		Entry markHidden(final long timestamp, final Boolean isHidden) {
+		Entry markHidden(final TimestampUTC timestamp, final Boolean isHidden) {
 
 			return new Entry(
 					timestamp,
@@ -399,40 +404,40 @@ public final class RedditChangeDataManager {
 	}
 
 	private static final class ListenerNotifyOperator
-			implements WeakReferenceListManager.ArgOperator<Listener, String> {
+			implements WeakReferenceListManager.ArgOperator<Listener, RedditIdAndType> {
 
 		public static final ListenerNotifyOperator INSTANCE =
 				new ListenerNotifyOperator();
 
 		@Override
-		public void operate(final Listener listener, final String arg) {
+		public void operate(final Listener listener, final RedditIdAndType arg) {
 			listener.onRedditDataChange(arg);
 		}
 	}
 
-	private final HashMap<String, Entry> mEntries = new HashMap<>();
+	private final HashMap<RedditIdAndType, Entry> mEntries = new HashMap<>();
 	private final Object mLock = new Object();
 
-	private final WeakReferenceListHashMapManager<String, Listener> mListeners =
+	private final WeakReferenceListHashMapManager<RedditIdAndType, Listener> mListeners =
 			new WeakReferenceListHashMapManager<>();
 
 	public void addListener(
-			final RedditThingWithIdAndType thing,
+			final RedditIdAndType thing,
 			final Listener listener) {
 
-		mListeners.add(thing.getIdAndType(), listener);
+		mListeners.add(thing, listener);
 	}
 
 	public void removeListener(
-			final RedditThingWithIdAndType thing,
+			final RedditIdAndType thing,
 			final Listener listener) {
 
-		mListeners.remove(thing.getIdAndType(), listener);
+		mListeners.remove(thing, listener);
 	}
 
-	private Entry get(final RedditThingWithIdAndType thing) {
+	private Entry get(final RedditIdAndType thing) {
 
-		final Entry entry = mEntries.get(thing.getIdAndType());
+		final Entry entry = mEntries.get(thing);
 
 		if(entry == null) {
 			return Entry.CLEAR_ENTRY;
@@ -442,68 +447,68 @@ public final class RedditChangeDataManager {
 	}
 
 	private void set(
-			final RedditThingWithIdAndType thing,
+			final RedditIdAndType thing,
 			final Entry existingValue,
 			final Entry newValue) {
 
 		if(newValue.isClear()) {
 			if(!existingValue.isClear()) {
-				mEntries.remove(thing.getIdAndType());
+				mEntries.remove(thing);
 				RedditChangeDataIO.notifyUpdateStatic();
 			}
 
 		} else {
-			mEntries.put(thing.getIdAndType(), newValue);
+			mEntries.put(thing, newValue);
 			RedditChangeDataIO.notifyUpdateStatic();
 		}
 
 		AndroidCommon.UI_THREAD_HANDLER.post(() -> mListeners.map(
-				thing.getIdAndType(),
+				thing,
 				ListenerNotifyOperator.INSTANCE,
-				thing.getIdAndType()));
+				thing));
 	}
 
-	private void insertAll(final HashMap<String, Entry> entries) {
+	private void insertAll(final HashMap<RedditIdAndType, Entry> entries) {
 
 		synchronized(mLock) {
 
-			for(final Map.Entry<String, Entry> entry : entries.entrySet()) {
+			for(final Map.Entry<RedditIdAndType, Entry> entry : entries.entrySet()) {
 
 				final Entry newEntry = entry.getValue();
 				final Entry existingEntry = mEntries.get(entry.getKey());
 
 				if(existingEntry == null
-						|| existingEntry.mTimestamp < newEntry.mTimestamp) {
+						|| existingEntry.mTimestamp.isLessThan(newEntry.mTimestamp)) {
 
 					mEntries.put(entry.getKey(), newEntry);
 				}
 			}
 		}
 
-		for(final String idAndType : entries.keySet()) {
+		for(final RedditIdAndType idAndType : entries.keySet()) {
 			mListeners.map(idAndType, ListenerNotifyOperator.INSTANCE, idAndType);
 		}
 	}
 
-	public void update(final long timestamp, final RedditComment comment) {
+	public void update(final TimestampUTC timestamp, final RedditComment comment) {
 
 		synchronized(mLock) {
-			final Entry existingEntry = get(comment);
+			final Entry existingEntry = get(comment.getIdAndType());
 			final Entry updatedEntry = existingEntry.update(timestamp, comment);
-			set(comment, existingEntry, updatedEntry);
+			set(comment.getIdAndType(), existingEntry, updatedEntry);
 		}
 	}
 
-	public void update(final long timestamp, final RedditPost post) {
+	public void update(final TimestampUTC timestamp, final RedditPost post) {
 
 		synchronized(mLock) {
-			final Entry existingEntry = get(post);
+			final Entry existingEntry = get(post.getIdAndType());
 			final Entry updatedEntry = existingEntry.update(timestamp, post);
-			set(post, existingEntry, updatedEntry);
+			set(post.getIdAndType(), existingEntry, updatedEntry);
 		}
 	}
 
-	public void markUpvoted(final long timestamp, final RedditThingWithIdAndType thing) {
+	public void markUpvoted(final TimestampUTC timestamp, final RedditIdAndType thing) {
 
 		synchronized(mLock) {
 			final Entry existingEntry = get(thing);
@@ -513,8 +518,8 @@ public final class RedditChangeDataManager {
 	}
 
 	public void markDownvoted(
-			final long timestamp,
-			final RedditThingWithIdAndType thing) {
+			final TimestampUTC timestamp,
+			final RedditIdAndType thing) {
 
 		synchronized(mLock) {
 			final Entry existingEntry = get(thing);
@@ -523,7 +528,7 @@ public final class RedditChangeDataManager {
 		}
 	}
 
-	public void markUnvoted(final long timestamp, final RedditThingWithIdAndType thing) {
+	public void markUnvoted(final TimestampUTC timestamp, final RedditIdAndType thing) {
 
 		synchronized(mLock) {
 			final Entry existingEntry = get(thing);
@@ -533,8 +538,8 @@ public final class RedditChangeDataManager {
 	}
 
 	public void markSaved(
-			final long timestamp,
-			final RedditThingWithIdAndType thing,
+			final TimestampUTC timestamp,
+			final RedditIdAndType thing,
 			final boolean saved) {
 
 		synchronized(mLock) {
@@ -545,8 +550,8 @@ public final class RedditChangeDataManager {
 	}
 
 	public void markHidden(
-			final long timestamp,
-			final RedditThingWithIdAndType thing,
+			final TimestampUTC timestamp,
+			final RedditIdAndType thing,
 			final Boolean hidden) {
 
 		synchronized(mLock) {
@@ -556,7 +561,7 @@ public final class RedditChangeDataManager {
 		}
 	}
 
-	public void markRead(final long timestamp, final RedditThingWithIdAndType thing) {
+	public void markRead(final TimestampUTC timestamp, final RedditIdAndType thing) {
 
 		synchronized(mLock) {
 			final Entry existingEntry = get(thing);
@@ -565,64 +570,67 @@ public final class RedditChangeDataManager {
 		}
 	}
 
-	public boolean isUpvoted(final RedditThingWithIdAndType thing) {
+	public boolean isUpvoted(final RedditIdAndType thing) {
 		synchronized(mLock) {
 			return get(thing).isUpvoted();
 		}
 	}
 
-	public boolean isDownvoted(final RedditThingWithIdAndType thing) {
+	public boolean isDownvoted(final RedditIdAndType thing) {
 		synchronized(mLock) {
 			return get(thing).isDownvoted();
 		}
 	}
 
-	public boolean isRead(final RedditThingWithIdAndType thing) {
+	public boolean isRead(final RedditIdAndType thing) {
 		synchronized(mLock) {
 			return get(thing).isRead();
 		}
 	}
 
-	public boolean isSaved(final RedditThingWithIdAndType thing) {
+	public boolean isSaved(final RedditIdAndType thing) {
 		synchronized(mLock) {
 			return get(thing).isSaved();
 		}
 	}
 
-	public Boolean isHidden(final RedditThingWithIdAndType thing) {
+	public Boolean isHidden(final RedditIdAndType thing) {
 		synchronized(mLock) {
 			return get(thing).isHidden();
 		}
 	}
 
-	private HashMap<String, Entry> snapshot() {
+	private HashMap<RedditIdAndType, Entry> snapshot() {
 		synchronized(mLock) {
 			return new HashMap<>(mEntries);
 		}
 	}
 
-	private void prune(final long maxAge) {
+	private void prune(final TimeDuration maxAge) {
 
-		final long now = System.currentTimeMillis();
-		final long timestampBoundary = now - maxAge;
+		final TimestampUTC now = TimestampUTC.now();
+		final TimestampUTC timestampBoundary = now.subtract(maxAge);
 
 		synchronized(mLock) {
-			final Iterator<Map.Entry<String, Entry>> iterator =
+			final Iterator<Map.Entry<RedditIdAndType, Entry>> iterator =
 					mEntries.entrySet().iterator();
-			final SortedMap<Long, String> byTimestamp = new TreeMap<>();
+			final SortedMap<TimestampUTC, RedditIdAndType> byTimestamp = new TreeMap<>();
 
 			while(iterator.hasNext()) {
 
-				final Map.Entry<String, Entry> entry = iterator.next();
-				final long timestamp = entry.getValue().mTimestamp;
+				final Map.Entry<RedditIdAndType, Entry> entry = iterator.next();
+				final TimestampUTC timestamp = entry.getValue().mTimestamp;
 				byTimestamp.put(timestamp, entry.getKey());
 
-				if(timestamp < timestampBoundary) {
+				if(timestamp.isLessThan(timestampBoundary)) {
 
 					Log.i(TAG, String.format(
-							"Pruning '%s' (%d hours old)",
+							"Pruning '%s' (%s old)",
 							entry.getKey(),
-							(now - timestamp) / (60L * 60L * 1000L)));
+							now.elapsedPeriodSince(timestamp).format(
+									TimeStringsDebug.INSTANCE,
+									2
+							)));
 
 					iterator.remove();
 				}
@@ -630,19 +638,22 @@ public final class RedditChangeDataManager {
 
 			// Limit total number of entries to limit our memory usage. This is meant as a
 			// safeguard, as the time-based pruning above should have removed enough already.
-			final Iterator<Map.Entry<Long, String>> iter2 =
+			final Iterator<Map.Entry<TimestampUTC, RedditIdAndType>> iter2 =
 					byTimestamp.entrySet().iterator();
 			while(iter2.hasNext()) {
 				if(mEntries.size() <= MAX_ENTRY_COUNT) {
 					break;
 				}
 
-				final Map.Entry<Long, String> entry = iter2.next();
+				final Map.Entry<TimestampUTC, RedditIdAndType> entry = iter2.next();
 
 				Log.i(TAG, String.format(
-						"Evicting '%s' (%d hours old)",
+						"Evicting '%s' (%s old)",
 						entry.getValue(),
-						(now - entry.getKey()) / (60L * 60L * 1000L)));
+						now.elapsedPeriodSince(entry.getKey()).format(
+								TimeStringsDebug.INSTANCE,
+								2
+						)));
 
 				mEntries.remove(entry.getValue());
 			}

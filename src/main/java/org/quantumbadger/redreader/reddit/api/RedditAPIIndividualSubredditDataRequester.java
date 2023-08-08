@@ -20,16 +20,18 @@ package org.quantumbadger.redreader.reddit.api;
 import android.content.Context;
 import android.util.Log;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.cache.CacheManager;
 import org.quantumbadger.redreader.cache.CacheRequest;
 import org.quantumbadger.redreader.cache.CacheRequestJSONParser;
 import org.quantumbadger.redreader.cache.downloadstrategy.DownloadStrategyAlways;
 import org.quantumbadger.redreader.common.Constants;
+import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.Priority;
+import org.quantumbadger.redreader.common.RRError;
 import org.quantumbadger.redreader.common.TimestampBound;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.http.FailedRequestBody;
 import org.quantumbadger.redreader.io.CacheDataSource;
 import org.quantumbadger.redreader.io.RequestResponseHandler;
@@ -46,10 +48,10 @@ import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class RedditAPIIndividualSubredditDataRequester implements
-		CacheDataSource<SubredditCanonicalId, RedditSubreddit, SubredditRequestFailure> {
+		CacheDataSource<SubredditCanonicalId, RedditSubreddit, RRError> {
 
 	private static final String TAG = "IndividualSRDataReq";
 
@@ -67,7 +69,7 @@ public class RedditAPIIndividualSubredditDataRequester implements
 	public void performRequest(
 			final SubredditCanonicalId subredditCanonicalId,
 			final TimestampBound timestampBound,
-			final RequestResponseHandler<RedditSubreddit, SubredditRequestFailure> handler) {
+			final RequestResponseHandler<RedditSubreddit, RRError> handler) {
 
 		final URI url = Constants.Reddit.getUri(subredditCanonicalId.toString() + "/about.json");
 
@@ -84,44 +86,32 @@ public class RedditAPIIndividualSubredditDataRequester implements
 					@Override
 					public void onJsonParsed(
 							@NonNull final JsonValue result,
-							final long timestamp,
+							final TimestampUTC timestamp,
 							@NonNull final UUID session,
 							final boolean fromCache) {
 
 						try {
 							final RedditThing subredditThing = result.asObject(RedditThing.class);
 							final RedditSubreddit subreddit = subredditThing.asSubreddit();
-							subreddit.downloadTime = timestamp;
+							subreddit.downloadTime = timestamp.toUtcMs();
 							handler.onRequestSuccess(subreddit, timestamp);
 
 							RedditSubredditHistory.addSubreddit(user, subredditCanonicalId);
 
 						} catch(final Exception e) {
-							handler.onRequestFailed(new SubredditRequestFailure(
+							handler.onRequestFailed(General.getGeneralErrorForFailure(
+									context,
 									CacheRequest.REQUEST_FAILURE_PARSE,
 									e,
 									null,
-									"Parse error",
-									url,
+									url.toString(),
 									Optional.of(new FailedRequestBody(result))));
 						}
 					}
 
 					@Override
-					public void onFailure(
-							final int type,
-							@Nullable final Throwable t,
-							@Nullable final Integer httpStatus,
-							@Nullable final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> body) {
-
-						handler.onRequestFailed(new SubredditRequestFailure(
-								type,
-								t,
-								httpStatus,
-								readableMessage,
-								url,
-								body));
+					public void onFailure(@NonNull final RRError error) {
+						handler.onRequestFailed(error);
 					}
 				}));
 
@@ -134,7 +124,7 @@ public class RedditAPIIndividualSubredditDataRequester implements
 			final TimestampBound timestampBound,
 			final RequestResponseHandler<
 					HashMap<SubredditCanonicalId, RedditSubreddit>,
-					SubredditRequestFailure> handler) {
+					RRError> handler) {
 
 		// TODO if there's a bulk API to do this, that would be good... :)
 
@@ -142,13 +132,13 @@ public class RedditAPIIndividualSubredditDataRequester implements
 		final AtomicBoolean stillOkay = new AtomicBoolean(true);
 		final AtomicInteger requestsToGo
 				= new AtomicInteger(subredditCanonicalIds.size());
-		final AtomicLong oldestResult = new AtomicLong(Long.MAX_VALUE);
+		final AtomicReference<TimestampUTC> oldestResult = new AtomicReference<>(null);
 
-		final RequestResponseHandler<RedditSubreddit, SubredditRequestFailure>
+		final RequestResponseHandler<RedditSubreddit, RRError>
 				innerHandler
-				= new RequestResponseHandler<RedditSubreddit, SubredditRequestFailure>() {
+				= new RequestResponseHandler<RedditSubreddit, RRError>() {
 			@Override
-			public void onRequestFailed(final SubredditRequestFailure failureReason) {
+			public void onRequestFailed(final RRError failureReason) {
 				synchronized(result) {
 					if(stillOkay.get()) {
 						stillOkay.set(false);
@@ -158,7 +148,10 @@ public class RedditAPIIndividualSubredditDataRequester implements
 			}
 
 			@Override
-			public void onRequestSuccess(final RedditSubreddit innerResult, final long timeCached) {
+			public void onRequestSuccess(
+					final RedditSubreddit innerResult,
+					final TimestampUTC timeCached) {
+
 				synchronized(result) {
 					if(stillOkay.get()) {
 
@@ -167,7 +160,17 @@ public class RedditAPIIndividualSubredditDataRequester implements
 									= innerResult.getCanonicalId();
 
 							result.put(canonicalId, innerResult);
-							oldestResult.set(Math.min(oldestResult.get(), timeCached));
+
+							synchronized (oldestResult) {
+								if(oldestResult.get() == null) {
+									oldestResult.set(timeCached);
+								} else {
+									oldestResult.set(TimestampUTC.oldest(
+											oldestResult.get(),
+											timeCached));
+								}
+							}
+
 							RedditSubredditHistory.addSubreddit(user, canonicalId);
 						} catch(final InvalidSubredditNameException e) {
 							Log.e(TAG, "Invalid subreddit name " + innerResult.name, e);

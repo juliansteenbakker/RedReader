@@ -58,8 +58,9 @@ import org.quantumbadger.redreader.common.Priority;
 import org.quantumbadger.redreader.common.RRError;
 import org.quantumbadger.redreader.common.SharedPrefsWrapper;
 import org.quantumbadger.redreader.common.datastream.SeekableInputStream;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.fragments.PostListingFragment;
-import org.quantumbadger.redreader.http.FailedRequestBody;
+import org.quantumbadger.redreader.reddit.api.RedditPostActions;
 import org.quantumbadger.redreader.reddit.prepared.RedditParsedPost;
 import org.quantumbadger.redreader.reddit.prepared.RedditPreparedPost;
 import org.quantumbadger.redreader.views.liststatus.ErrorView;
@@ -79,6 +80,8 @@ public final class RedditPostView extends FlingableItemView
 	private static final String PROMPT_PREF_KEY = "inline_image_prompt_accepted";
 
 	private static final AtomicInteger sInlinePreviewsShownThisSession = new AtomicInteger(0);
+
+	private final AccessibilityActionManager mAccessibilityActionManager;
 
 	private RedditPreparedPost mPost = null;
 	private final TextView title;
@@ -107,8 +110,8 @@ public final class RedditPostView extends FlingableItemView
 
 	private final PrefsUtility.PostFlingAction mLeftFlingPref;
 	private final PrefsUtility.PostFlingAction mRightFlingPref;
-	private ActionDescriptionPair mLeftFlingAction;
-	private ActionDescriptionPair mRightFlingAction;
+	private RedditPostActions.ActionDescriptionPair mLeftFlingAction;
+	private RedditPostActions.ActionDescriptionPair mRightFlingAction;
 
 	private final boolean mCommentsButtonPref;
 
@@ -129,10 +132,10 @@ public final class RedditPostView extends FlingableItemView
 	@Override
 	protected String getFlingLeftText() {
 
-		mLeftFlingAction = chooseFlingAction(mLeftFlingPref);
+		mLeftFlingAction = RedditPostActions.ActionDescriptionPair.from(mPost, mLeftFlingPref);
 
 		if(mLeftFlingAction != null) {
-			return mActivity.getString(mLeftFlingAction.descriptionRes);
+			return mActivity.getString(mLeftFlingAction.getDescriptionRes());
 		} else {
 			return "Disabled";
 		}
@@ -142,10 +145,10 @@ public final class RedditPostView extends FlingableItemView
 	@Override
 	protected String getFlingRightText() {
 
-		mRightFlingAction = chooseFlingAction(mRightFlingPref);
+		mRightFlingAction = RedditPostActions.ActionDescriptionPair.from(mPost, mRightFlingPref);
 
 		if(mRightFlingAction != null) {
-			return mActivity.getString(mRightFlingAction.descriptionRes);
+			return mActivity.getString(mRightFlingAction.getDescriptionRes());
 		} else {
 			return "Disabled";
 		}
@@ -163,162 +166,21 @@ public final class RedditPostView extends FlingableItemView
 
 	@Override
 	protected void onFlungLeft() {
-		RedditPreparedPost.onActionMenuItemSelected(
+		RedditPostActions.INSTANCE.onActionMenuItemSelected(
 				mPost,
 				mActivity,
-				mLeftFlingAction.action);
+				mLeftFlingAction.getAction());
 	}
 
 	@Override
 	protected void onFlungRight() {
-		RedditPreparedPost.onActionMenuItemSelected(
+		RedditPostActions.INSTANCE.onActionMenuItemSelected(
 				mPost,
 				mActivity,
-				mRightFlingAction.action);
+				mRightFlingAction.getAction());
 	}
 
-	private static final class ActionDescriptionPair {
-		public final RedditPreparedPost.Action action;
-		public final int descriptionRes;
 
-		private ActionDescriptionPair(
-				final RedditPreparedPost.Action action,
-				final int descriptionRes) {
-			this.action = action;
-			this.descriptionRes = descriptionRes;
-		}
-	}
-
-	private ActionDescriptionPair chooseFlingAction(final PrefsUtility.PostFlingAction pref) {
-
-		switch(pref) {
-
-			case UPVOTE:
-				if(mPost.isUpvoted()) {
-					return new ActionDescriptionPair(
-							RedditPreparedPost.Action.UNVOTE,
-							R.string.action_vote_remove);
-				} else {
-					return new ActionDescriptionPair(
-							RedditPreparedPost.Action.UPVOTE,
-							R.string.action_upvote);
-				}
-
-			case DOWNVOTE:
-				if(mPost.isDownvoted()) {
-					return new ActionDescriptionPair(
-							RedditPreparedPost.Action.UNVOTE,
-							R.string.action_vote_remove);
-				} else {
-					return new ActionDescriptionPair(
-							RedditPreparedPost.Action.DOWNVOTE,
-							R.string.action_downvote);
-				}
-
-			case SAVE:
-				if(mPost.isSaved()) {
-					return new ActionDescriptionPair(
-							RedditPreparedPost.Action.UNSAVE,
-							R.string.action_unsave);
-				} else {
-					return new ActionDescriptionPair(
-							RedditPreparedPost.Action.SAVE,
-							R.string.action_save);
-				}
-
-			case HIDE:
-				if(mPost.isHidden()) {
-					return new ActionDescriptionPair(
-							RedditPreparedPost.Action.UNHIDE,
-							R.string.action_unhide);
-				} else {
-					return new ActionDescriptionPair(
-							RedditPreparedPost.Action.HIDE,
-							R.string.action_hide);
-				}
-
-			case COMMENTS:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.COMMENTS,
-						R.string.action_comments_short);
-
-			case LINK:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.LINK,
-						R.string.action_link_short);
-
-			case BROWSER:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.EXTERNAL,
-						R.string.action_external_short);
-
-			case REPORT:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.REPORT,
-						R.string.action_report
-				);
-
-			case SAVE_IMAGE:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.SAVE_IMAGE,
-						R.string.action_save_image
-				);
-
-			case GOTO_SUBREDDIT:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.GOTO_SUBREDDIT,
-						R.string.action_gotosubreddit
-				);
-
-			case SHARE:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.SHARE,
-						R.string.action_share
-				);
-
-			case SHARE_COMMENTS:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.SHARE_COMMENTS,
-						R.string.action_share_comments
-				);
-
-			case SHARE_IMAGE:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.SHARE_IMAGE,
-						R.string.action_share_image
-				);
-
-			case COPY:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.COPY,
-						R.string.action_copy_link
-				);
-
-			case USER_PROFILE:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.USER_PROFILE,
-						R.string.action_user_profile_short
-				);
-
-			case PROPERTIES:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.PROPERTIES,
-						R.string.action_properties
-				);
-
-			case ACTION_MENU:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.ACTION_MENU,
-						R.string.action_actionmenu_short);
-
-			case BACK:
-				return new ActionDescriptionPair(
-						RedditPreparedPost.Action.BACK,
-						R.string.action_back);
-		}
-
-		return null;
-	}
 
 	public RedditPostView(
 			final Context context,
@@ -328,6 +190,10 @@ public final class RedditPostView extends FlingableItemView
 
 		super(context);
 		mActivity = activity;
+
+		mAccessibilityActionManager = new AccessibilityActionManager(
+				this,
+				context.getResources());
 
 		thumbnailHandler = new Handler(Looper.getMainLooper()) {
 			@Override
@@ -373,7 +239,7 @@ public final class RedditPostView extends FlingableItemView
 		mOuterView.setOnClickListener(v -> fragmentParent.onPostSelected(mPost));
 
 		mOuterView.setOnLongClickListener(v -> {
-			RedditPreparedPost.showActionMenu(mActivity, mPost);
+			RedditPostActions.INSTANCE.showActionMenu(mActivity, mPost);
 			return true;
 		});
 
@@ -474,7 +340,7 @@ public final class RedditPostView extends FlingableItemView
 
 			title.setText(newPost.src.getTitle());
 			if(mCommentsButtonPref) {
-				mCommentsText.setText(String.valueOf(newPost.src.getSrc().num_comments));
+				mCommentsText.setText(String.valueOf(newPost.src.getSrc().getNum_comments()));
 			}
 
 			final boolean showInlinePreview = newPost.shouldShowInlinePreview();
@@ -539,6 +405,8 @@ public final class RedditPostView extends FlingableItemView
 			title.setTextColor(rrPostTitleCol);
 		}
 
+		title.setContentDescription(mPost.buildAccessibilityTitle(mActivity, false));
+
 		subtitle.setText(mPost.buildSubtitle(mActivity, false));
 		subtitle.setContentDescription(mPost.buildAccessibilitySubtitle(mActivity, false));
 
@@ -565,6 +433,12 @@ public final class RedditPostView extends FlingableItemView
 		} else {
 			mOverlayIcon.setVisibility(GONE);
 		}
+
+		RedditPostActions.INSTANCE.setupAccessibilityActions(
+				mAccessibilityActionManager,
+				mPost,
+				mActivity,
+				false);
 	}
 
 	@Override
@@ -644,7 +518,7 @@ public final class RedditPostView extends FlingableItemView
 					@Override
 					public void onDataStreamComplete(
 							@NonNull final GenericFactory<SeekableInputStream, IOException> stream,
-							final long timestamp,
+							final TimestampUTC timestamp,
 							@NonNull final UUID session,
 							final boolean fromCache,
 							@Nullable final String mimetype) {
@@ -696,24 +570,20 @@ public final class RedditPostView extends FlingableItemView
 							});
 
 						} catch(final Throwable t) {
-							onFailure(
+							onFailure(General.getGeneralErrorForFailure(
+									mActivity,
 									CacheRequest.REQUEST_FAILURE_CONNECTION,
 									t,
 									null,
-									"Exception while downloading thumbnail",
-									Optional.empty());
+									preview.url,
+									Optional.empty()));
 						}
 					}
 
 					@Override
-					public void onFailure(
-							final int type,
-							@Nullable final Throwable t,
-							@Nullable final Integer httpStatus,
-							@Nullable final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> body) {
+					public void onFailure(@NonNull final RRError error) {
 
-						Log.e(TAG, "Failed to download image preview", t);
+						Log.e(TAG, "Failed to download image preview: " + error, error.t);
 
 						if(usageId != mUsageId) {
 							return;
@@ -721,24 +591,12 @@ public final class RedditPostView extends FlingableItemView
 
 						AndroidCommon.runOnUiThread(() -> {
 
-							final Context context = mActivity.getApplicationContext();
-
 							mImagePreviewLoadingSpinner.setVisibility(GONE);
 							mImagePreviewOuter.setVisibility(GONE);
 
 							final ErrorView errorView = new ErrorView(
 									mActivity,
-									new RRError(
-											context.getString(
-													R.string.error_inline_preview_failed_title),
-											context.getString(
-													R.string.error_inline_preview_failed_message),
-											true,
-											t,
-											httpStatus,
-											preview.url,
-											null,
-											body));
+									error);
 
 							mPostErrors.addView(errorView);
 							General.setLayoutMatchWidthWrapHeight(errorView);

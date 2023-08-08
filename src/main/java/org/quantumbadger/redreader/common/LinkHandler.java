@@ -46,7 +46,6 @@ import org.quantumbadger.redreader.activities.WebViewActivity;
 import org.quantumbadger.redreader.cache.CacheRequest;
 import org.quantumbadger.redreader.fragments.ShareOrderDialog;
 import org.quantumbadger.redreader.fragments.UserProfileDialog;
-import org.quantumbadger.redreader.http.FailedRequestBody;
 import org.quantumbadger.redreader.image.AlbumInfo;
 import org.quantumbadger.redreader.image.DeviantArtAPI;
 import org.quantumbadger.redreader.image.GetAlbumInfoListener;
@@ -58,8 +57,9 @@ import org.quantumbadger.redreader.image.ImgurAPIV3;
 import org.quantumbadger.redreader.image.RedditGalleryAPI;
 import org.quantumbadger.redreader.image.RedditVideosAPI;
 import org.quantumbadger.redreader.image.RedgifsAPI;
+import org.quantumbadger.redreader.image.RedgifsAPIV2;
 import org.quantumbadger.redreader.image.StreamableAPI;
-import org.quantumbadger.redreader.reddit.things.RedditPost;
+import org.quantumbadger.redreader.reddit.kthings.RedditPost;
 import org.quantumbadger.redreader.reddit.url.ComposeMessageURL;
 import org.quantumbadger.redreader.reddit.url.RedditURLParser;
 
@@ -549,7 +549,7 @@ public class LinkHandler {
 	}
 
 	public static final Pattern imgurPattern
-			= Pattern.compile(".*[^A-Za-z]imgur\\.com/(\\w+).*");
+			= Pattern.compile("https?://?(i\\.)?imgur\\.com/(\\w+).*");
 	public static final Pattern imgurAlbumPattern
 			= Pattern.compile(".*[^A-Za-z]imgur\\.com/(a|gallery)/(\\w+).*");
 	public static final Pattern redditGalleryPattern
@@ -579,13 +579,17 @@ public class LinkHandler {
 	public static final Pattern giphyPattern
 			= Pattern.compile(".*[^A-Za-z]giphy\\.com/gifs/(\\w+).*");
 
-	public static boolean isProbablyAnImage(final String url) {
+	public static boolean isProbablyAnImage(@Nullable final String url) {
+
+		if(url == null) {
+			return false;
+		}
 
 		{
 			final Matcher matchImgur = imgurPattern.matcher(url);
 
 			if(matchImgur.find()) {
-				final String imgId = matchImgur.group(1);
+				final String imgId = matchImgur.group(2);
 				if(imgId.length() > 2 && !imgId.startsWith("gallery")) {
 					return true;
 				}
@@ -719,12 +723,7 @@ public class LinkHandler {
 				true,
 				new ImageInfoRetryListener(listener) {
 					@Override
-					public void onFailure(
-							final @CacheRequest.RequestFailureType int type,
-							final Throwable t,
-							final Integer status,
-							final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> firstBody) {
+					public void onFailure(@NonNull final RRError firstError) {
 
 						if(General.isSensitiveDebugLoggingEnabled()) {
 							Log.i(
@@ -739,12 +738,7 @@ public class LinkHandler {
 								false,
 								new ImageInfoRetryListener(listener) {
 									@Override
-									public void onFailure(
-											final @CacheRequest.RequestFailureType int type,
-											final Throwable t,
-											final Integer status,
-											final String readableMessage,
-											@NonNull final Optional<FailedRequestBody> body) {
+									public void onFailure(@NonNull final RRError error) {
 
 										if(General.isSensitiveDebugLoggingEnabled()) {
 											Log.i(
@@ -759,13 +753,7 @@ public class LinkHandler {
 												new ImageInfoRetryListener(listener) {
 													@Override
 													public void onFailure(
-															final @CacheRequest.RequestFailureType
-																	int type,
-															final Throwable t,
-															final Integer status,
-															final String readableMessage,
-															@NonNull final
-																Optional<FailedRequestBody> body) {
+															@NonNull final RRError error) {
 
 														Log.i(
 																"getImgurImageInfo",
@@ -781,12 +769,7 @@ public class LinkHandler {
 															));
 
 														} else {
-															listener.onFailure(
-																	type,
-																	t,
-																	status,
-																	readableMessage,
-																	firstBody);
+															listener.onFailure(firstError);
 														}
 													}
 												});
@@ -839,12 +822,7 @@ public class LinkHandler {
 				true,
 				new AlbumInfoRetryListener(listener) {
 					@Override
-					public void onFailure(
-							final @CacheRequest.RequestFailureType int type,
-							final Throwable t,
-							final Integer status,
-							final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> firstBody) {
+					public void onFailure(@NonNull final RRError firstError) {
 
 						if(General.isSensitiveDebugLoggingEnabled()) {
 							Log.i(
@@ -860,12 +838,7 @@ public class LinkHandler {
 								false,
 								new AlbumInfoRetryListener(listener) {
 									@Override
-									public void onFailure(
-											final @CacheRequest.RequestFailureType int type,
-											final Throwable t,
-											final Integer status,
-											final String readableMessage,
-											@NonNull final Optional<FailedRequestBody> body) {
+									public void onFailure(@NonNull final RRError error) {
 
 										if(General.isSensitiveDebugLoggingEnabled()) {
 											Log.i(
@@ -881,23 +854,12 @@ public class LinkHandler {
 												new AlbumInfoRetryListener(listener) {
 													@Override
 													public void onFailure(
-															final @CacheRequest.RequestFailureType
-																	int type,
-															final Throwable t,
-															final Integer status,
-															final String readableMessage,
-															@NonNull final
-																Optional<FailedRequestBody> body) {
+															@NonNull final RRError error) {
 
 														Log.i(
 																"getImgurImageInfo",
 																"All API requests failed!");
-														listener.onFailure(
-																type,
-																t,
-																status,
-																readableMessage,
-																firstBody);
+														listener.onFailure(firstError);
 													}
 												});
 
@@ -942,25 +904,31 @@ public class LinkHandler {
 			}
 		}
 
-		listener.onFailure(
+		listener.onFailure(General.getGeneralErrorForFailure(
+				context,
 				CacheRequest.REQUEST_FAILURE_MALFORMED_URL,
 				null,
 				null,
-				"Cannot parse '" + url + "' as an album URL",
-				Optional.empty());
+				url,
+				Optional.empty()));
 	}
 
 	public static void getImageInfo(
 			final Context context,
-			final String url,
+			@Nullable final String url,
 			@NonNull final Priority priority,
 			final GetImageInfoListener listener) {
+
+		if(url == null) {
+			listener.onNotAnImage();
+			return;
+		}
 
 		{
 			final Matcher matchImgur = imgurPattern.matcher(url);
 
 			if(matchImgur.find()) {
-				final String imgId = matchImgur.group(1);
+				final String imgId = matchImgur.group(2);
 				if(imgId.length() > 2 && !imgId.startsWith("gallery")) {
 					getImgurImageInfo(context, imgId, priority, true, listener);
 					return;
@@ -986,7 +954,40 @@ public class LinkHandler {
 			if(matchRedgifs.find()) {
 				final String imgId = matchRedgifs.group(1);
 				if(imgId.length() > 5) {
-					RedgifsAPI.getImageInfo(context, imgId, priority, listener);
+					RedgifsAPIV2.getImageInfo(
+							context,
+							imgId,
+							priority,
+							new ImageInfoRetryListener(listener) {
+
+						@Override
+						public void onFailure(@NonNull final RRError error) {
+
+							Log.e(
+									"getImageInfo",
+									"RedGifs V2 failed, trying V1 (" + error + ")",
+									error.t);
+
+							RedgifsAPI.getImageInfo(
+									context,
+									imgId,
+									priority,
+									new ImageInfoRetryListener(listener) {
+								@Override
+								public void onFailure(@NonNull final RRError error) {
+
+									// Retry V2 so that the final error which is logged
+									// relates to the V2 API
+									Log.e(
+											"getImageInfo",
+											"RedGifs V1 also failed, retrying V2: " + error,
+											error.t);
+
+									RedgifsAPIV2.getImageInfo(context, imgId, priority, listener);
+								}
+							});
+						}
+					});
 					return;
 				}
 			}
@@ -1229,7 +1230,7 @@ public class LinkHandler {
 
 	}
 
-	public static LinkedHashSet<String> computeAllLinks(final String text) {
+	public static LinkedHashSet<String> computeAllLinks(@NonNull final String text) {
 
 		final LinkedHashSet<String> result = new LinkedHashSet<>();
 
@@ -1276,7 +1277,11 @@ public class LinkHandler {
 	public static void shareText(
 			@NonNull final AppCompatActivity activity,
 			@Nullable final String subject,
-			@NonNull final String text) {
+			@Nullable String text) {
+
+		if(text == null) {
+			text = "<null>";
+		}
 
 		final Intent mailer = new Intent(Intent.ACTION_SEND);
 		mailer.setType("text/plain");

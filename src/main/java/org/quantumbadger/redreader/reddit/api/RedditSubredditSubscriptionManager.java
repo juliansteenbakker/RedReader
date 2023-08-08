@@ -27,16 +27,15 @@ import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.activities.BugReportActivity;
 import org.quantumbadger.redreader.cache.CacheManager;
-import org.quantumbadger.redreader.cache.CacheRequest;
+import org.quantumbadger.redreader.common.FunctionOneArgNoReturn;
 import org.quantumbadger.redreader.common.General;
-import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.RRError;
-import org.quantumbadger.redreader.common.RRTime;
 import org.quantumbadger.redreader.common.TimestampBound;
 import org.quantumbadger.redreader.common.UnexpectedInternalStateException;
 import org.quantumbadger.redreader.common.collections.CollectionStream;
 import org.quantumbadger.redreader.common.collections.WeakReferenceListManager;
-import org.quantumbadger.redreader.http.FailedRequestBody;
+import org.quantumbadger.redreader.common.time.TimeDuration;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.io.RawObjectDB;
 import org.quantumbadger.redreader.io.RequestResponseHandler;
 import org.quantumbadger.redreader.io.WritableHashSet;
@@ -90,7 +89,7 @@ public class RedditSubredditSubscriptionManager {
 	@NonNull private final HashSet<SubredditCanonicalId> pendingUnsubscriptions =
 			new HashSet<>();
 
-	private long mLastUpdateRequestTime;
+	private TimestampUTC mLastUpdateRequestTime = TimestampUTC.ZERO;
 
 	public static synchronized RedditSubredditSubscriptionManager getSingleton(
 			final Context context,
@@ -205,7 +204,7 @@ public class RedditSubredditSubscriptionManager {
 
 	private synchronized void onNewSubscriptionListReceived(
 			final HashSet<SubredditCanonicalId> newSubscriptions,
-			final long timestamp) {
+			final TimestampUTC timestamp) {
 
 		pendingSubscriptions.clear();
 		pendingUnsubscriptions.clear();
@@ -239,18 +238,44 @@ public class RedditSubredditSubscriptionManager {
 				.collect(new ArrayList<>());
 	}
 
-	public synchronized void triggerUpdateIfNotReady() {
+	public synchronized void triggerUpdateIfNotReady(
+			@Nullable final FunctionOneArgNoReturn<RRError> onFailure) {
+
+		final RequestResponseHandler<HashSet<SubredditCanonicalId>, RRError> handler
+				= new RequestResponseHandler<
+						HashSet<SubredditCanonicalId>,
+						RRError>() {
+
+			@Override
+			public void onRequestFailed(final RRError failureReason) {
+				if(onFailure != null) {
+					onFailure.apply(failureReason);
+				}
+			}
+
+			@Override
+			public void onRequestSuccess(
+					final HashSet<SubredditCanonicalId> result,
+					final TimestampUTC timeCached) {
+				// Do nothing
+			}
+		};
+
 		if(!areSubscriptionsReady()
-				&& (mLastUpdateRequestTime == 0
-				|| RRTime.since(mLastUpdateRequestTime) > RRTime.secsToMs(10))) {
-			triggerUpdate(null, TimestampBound.notOlderThan(RRTime.hoursToMs(1)));
+				&& (mLastUpdateRequestTime == TimestampUTC.ZERO
+				|| mLastUpdateRequestTime.elapsed().isGreaterThan(TimeDuration.secs(10)))) {
+			triggerUpdate(handler, TimestampBound.notOlderThan(TimeDuration.hours(1)));
 		}
+	}
+
+	public synchronized void triggerUpdateIfNotReady() {
+		triggerUpdateIfNotReady(null);
 	}
 
 	public synchronized void triggerUpdate(
 			@Nullable final RequestResponseHandler<
 					HashSet<SubredditCanonicalId>,
-					SubredditRequestFailure> handler,
+					RRError> handler,
 			@NonNull final TimestampBound timestampBound) {
 
 		if(subscriptions != null
@@ -258,16 +283,16 @@ public class RedditSubredditSubscriptionManager {
 			return;
 		}
 
-		mLastUpdateRequestTime = RRTime.utcCurrentTimeMillis();
+		mLastUpdateRequestTime = TimestampUTC.now();
 
 		new RedditAPIIndividualSubredditListRequester(context, user).performRequest(
 				RedditSubredditManager.SubredditListType.SUBSCRIBED,
 				timestampBound,
-				new RequestResponseHandler<WritableHashSet, SubredditRequestFailure>() {
+				new RequestResponseHandler<WritableHashSet, RRError>() {
 
 					// TODO handle failed requests properly -- retry? then notify listeners
 					@Override
-					public void onRequestFailed(final SubredditRequestFailure failureReason) {
+					public void onRequestFailed(final RRError failureReason) {
 						if(handler != null) {
 							handler.onRequestFailed(failureReason);
 						}
@@ -276,7 +301,7 @@ public class RedditSubredditSubscriptionManager {
 					@Override
 					public void onRequestSuccess(
 							final WritableHashSet result,
-							final long timeCached) {
+							final TimestampUTC timeCached) {
 						final HashSet<String> newSubscriptionStrings = result.toHashset();
 
 						final HashSet<SubredditCanonicalId> newSubscriptions =
@@ -372,14 +397,9 @@ public class RedditSubredditSubscriptionManager {
 		}
 
 		@Override
-		protected void onFailure(
-				@CacheRequest.RequestFailureType final int type,
-				final Throwable t,
-				final Integer status,
-				final String readableMessage,
-				@NonNull final Optional<FailedRequestBody> response) {
+		protected void onFailure(@NonNull final RRError error) {
 
-			if(status != null && status == 404) {
+			if(error.httpStatus != null && error.httpStatus == 404) {
 				// Weirdly, reddit returns a 404 if we were already subscribed/unsubscribed to
 				// this subreddit.
 
@@ -392,28 +412,6 @@ public class RedditSubredditSubscriptionManager {
 			}
 
 			onSubscriptionChangeAttemptFailed(canonicalName);
-
-			final RRError error = General.getGeneralErrorForFailure(
-					context,
-					type,
-					t,
-					status,
-					"Subreddit action " + action + " for " + canonicalName,
-					response);
-
-			General.showResultDialog(activity, error);
-		}
-
-		@Override
-		protected void onFailure(
-				@NonNull final APIFailureType type,
-				@Nullable final String debuggingContext,
-				@NonNull final Optional<FailedRequestBody> response) {
-
-			onSubscriptionChangeAttemptFailed(canonicalName);
-
-			final RRError error
-					= General.getGeneralErrorForFailure(context, type, debuggingContext, response);
 
 			General.showResultDialog(activity, error);
 		}

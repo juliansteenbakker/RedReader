@@ -21,12 +21,16 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.activities.BaseActivity;
@@ -34,21 +38,31 @@ import org.quantumbadger.redreader.activities.BugReportActivity;
 import org.quantumbadger.redreader.activities.PMSendActivity;
 import org.quantumbadger.redreader.cache.CacheManager;
 import org.quantumbadger.redreader.cache.CacheRequest;
+import org.quantumbadger.redreader.cache.CacheRequestCallbacks;
 import org.quantumbadger.redreader.cache.downloadstrategy.DownloadStrategyAlways;
+import org.quantumbadger.redreader.cache.downloadstrategy.DownloadStrategyIfNotCached;
 import org.quantumbadger.redreader.common.AndroidCommon;
 import org.quantumbadger.redreader.common.Constants;
 import org.quantumbadger.redreader.common.General;
+import org.quantumbadger.redreader.common.GenericFactory;
 import org.quantumbadger.redreader.common.LinkHandler;
 import org.quantumbadger.redreader.common.Optional;
+import org.quantumbadger.redreader.common.PrefsUtility;
+import org.quantumbadger.redreader.common.Priority;
 import org.quantumbadger.redreader.common.RRError;
-import org.quantumbadger.redreader.common.RRTime;
-import org.quantumbadger.redreader.http.FailedRequestBody;
+import org.quantumbadger.redreader.common.datastream.SeekableInputStream;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.reddit.APIResponseHandler;
 import org.quantumbadger.redreader.reddit.RedditAPI;
 import org.quantumbadger.redreader.reddit.things.RedditUser;
 import org.quantumbadger.redreader.reddit.url.UserPostListingURL;
 import org.quantumbadger.redreader.views.liststatus.ErrorView;
 import org.quantumbadger.redreader.views.liststatus.LoadingView;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.util.UUID;
 
 public class UserProfileDialog extends PropertiesDialog {
 
@@ -105,8 +119,7 @@ public class UserProfileDialog extends PropertiesDialog {
 					}
 
 					@Override
-					protected void onSuccess(final RedditUser user, final long timestamp) {
-
+					protected void onSuccess(final RedditUser user, final TimestampUTC timestamp) {
 						AndroidCommon.UI_THREAD_HANDLER.post(() -> {
 
 							if(!active) {
@@ -115,9 +128,34 @@ public class UserProfileDialog extends PropertiesDialog {
 
 							loadingView.setDone(R.string.download_done);
 
+							if(PrefsUtility.appearance_user_show_avatars()) {
+								final String iconUrl = user.getIconUrl();
+
+								if (iconUrl != null && !iconUrl.equals("")) {
+									final LinearLayout avatarLayout
+											= (LinearLayout) context.getLayoutInflater()
+											.inflate(R.layout.avatar, null);
+									items.addView(avatarLayout);
+
+									final ImageView avatarImage
+											= avatarLayout
+											.findViewById(R.id.layout_avatar_image);
+
+									try {
+										assignUserAvatar(iconUrl, avatarImage, context);
+									} catch (final URISyntaxException e) {
+										Log.d("UserProfileDialog", "Error decoding uri: " + e);
+									}
+								} else {
+									Log.d(
+											"UserProfileDialog",
+											"Unknown icon url: " + user.icon_img);
+								}
+							}
+
 							final LinearLayout karmaLayout
 									= (LinearLayout)context.getLayoutInflater()
-									.inflate(R.layout.karma, null);
+											.inflate(R.layout.karma, null);
 							items.addView(karmaLayout);
 
 							final LinearLayout linkKarmaLayout
@@ -168,9 +206,7 @@ public class UserProfileDialog extends PropertiesDialog {
 							items.addView(propView(
 									context,
 									R.string.userprofile_created,
-									RRTime.formatDateTime(
-											user.created_utc * 1000,
-											context),
+									TimestampUTC.fromUtcSecs(user.created_utc).format(),
 									false));
 							items.getChildAt(items.getChildCount() - 1)
 									.setNextFocusUpId(R.id.layout_karma_link);
@@ -251,12 +287,7 @@ public class UserProfileDialog extends PropertiesDialog {
 					}
 
 					@Override
-					protected void onFailure(
-							final @CacheRequest.RequestFailureType int type,
-							final Throwable t,
-							final Integer status,
-							final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> response) {
+					protected void onFailure(@NonNull final RRError error) {
 
 						AndroidCommon.UI_THREAD_HANDLER.post(() -> {
 
@@ -266,43 +297,64 @@ public class UserProfileDialog extends PropertiesDialog {
 
 							loadingView.setDone(R.string.download_failed);
 
-							final RRError error = General.getGeneralErrorForFailure(
-									context,
-									type,
-									t,
-									status,
-									null,
-									response);
 							items.addView(new ErrorView(context, error));
 						});
 					}
-
-					@Override
-					protected void onFailure(
-							@NonNull final APIFailureType type,
-							@Nullable final String debuggingContext,
-							@NonNull final Optional<FailedRequestBody> response) {
-
-						AndroidCommon.UI_THREAD_HANDLER.post(() -> {
-
-							if(!active) {
-								return;
-							}
-
-							loadingView.setDone(R.string.download_failed);
-
-							final RRError error = General.getGeneralErrorForFailure(
-									context,
-									type,
-									debuggingContext,
-									response);
-							items.addView(new ErrorView(context, error));
-						});
-					}
-
 				},
 				RedditAccountManager.getInstance(context).getDefaultAccount(),
 				DownloadStrategyAlways.INSTANCE,
 				context);
+	}
+
+	public void assignUserAvatar(
+			final String url,
+			final ImageView imageOutput,
+			final AppCompatActivity context)
+			throws URISyntaxException {
+		CacheManager.getInstance(context).makeRequest(new CacheRequest(
+			General.uriFromString(url),
+			RedditAccountManager.getAnon(),
+			null,
+			new Priority(Constants.Priority.INLINE_IMAGE_PREVIEW),
+			DownloadStrategyIfNotCached.INSTANCE,
+			Constants.FileType.INLINE_IMAGE_PREVIEW,
+			CacheRequest.DOWNLOAD_QUEUE_IMMEDIATE,
+			context,
+			new CacheRequestCallbacks() {
+				@Override
+				public void onDataStreamComplete(
+						final GenericFactory<SeekableInputStream, IOException> streamFactory,
+						final TimestampUTC timestamp,
+						final UUID session,
+						final boolean fromCache,
+						final  String mimetype) {
+					try(InputStream is = streamFactory.create()) {
+						final Bitmap data = BitmapFactory.decodeStream(is);
+						if(data == null) {
+							throw new IOException("Failed to decode bitmap");
+						}
+						AndroidCommon.runOnUiThread(() -> {
+							imageOutput.setImageBitmap(data);
+						});
+
+					} catch(final Throwable t) {
+						onFailure(General.getGeneralErrorForFailure(
+								context,
+								CacheRequest.REQUEST_FAILURE_CONNECTION,
+								t,
+								null,
+								url,
+								Optional.empty()));
+					}
+				}
+
+				@Override
+				public void onFailure(@NonNull final RRError error) {
+					Log.d(
+							"UserProfileDialog",
+							"Failed to download user avatar: " + error);
+				}
+			}
+		));
 	}
 }

@@ -32,6 +32,7 @@ import org.quantumbadger.redreader.common.Fonts;
 import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.LinkHandler;
 import org.quantumbadger.redreader.common.PrefsUtility;
+import org.quantumbadger.redreader.reddit.api.RedditPostActions;
 import org.quantumbadger.redreader.reddit.prepared.RedditChangeDataManager;
 import org.quantumbadger.redreader.reddit.prepared.RedditPreparedPost;
 
@@ -53,6 +54,15 @@ public class RedditPostHeaderView extends LinearLayout {
 		setOrientation(LinearLayout.VERTICAL);
 
 		final LinearLayout greyHeader = new LinearLayout(activity);
+
+		RedditPostActions.INSTANCE.setupAccessibilityActions(
+				new AccessibilityActionManager(
+						greyHeader,
+						activity.getResources()),
+				post,
+				activity,
+				true);
+
 		greyHeader.setOrientation(LinearLayout.VERTICAL);
 
 
@@ -67,6 +77,7 @@ public class RedditPostHeaderView extends LinearLayout {
 		title.setTextSize(19.0f * titleFontScale);
 		title.setTypeface(Fonts.getRobotoLightOrAlternative());
 		title.setText(post.src.getTitle());
+		title.setContentDescription(post.buildAccessibilityTitle(activity, true));
 		title.setTextColor(Color.WHITE);
 		greyHeader.addView(title);
 
@@ -101,7 +112,7 @@ public class RedditPostHeaderView extends LinearLayout {
 		});
 
 		greyHeader.setOnLongClickListener(v -> {
-			RedditPreparedPost.showActionMenu(activity, post);
+			RedditPostActions.INSTANCE.showActionMenu(activity, post);
 			return true;
 		});
 
@@ -155,25 +166,25 @@ public class RedditPostHeaderView extends LinearLayout {
 
 				buttonAddUpvote.setOnClickListener(v -> post.performAction(
 						activity,
-						RedditPreparedPost.Action.UPVOTE));
+						RedditPostActions.Action.UPVOTE));
 				buttonRemoveUpvote.setOnClickListener(v -> post.performAction(
 						activity,
-						RedditPreparedPost.Action.UNVOTE));
+						RedditPostActions.Action.UNVOTE));
 				buttonAddDownvote.setOnClickListener(v -> post.performAction(
 						activity,
-						RedditPreparedPost.Action.DOWNVOTE));
+						RedditPostActions.Action.DOWNVOTE));
 				buttonRemoveDownvote.setOnClickListener(v -> post.performAction(
 						activity,
-						RedditPreparedPost.Action.UNVOTE));
+						RedditPostActions.Action.UNVOTE));
 				buttonReply.setOnClickListener(v -> post.performAction(
 						activity,
-						RedditPreparedPost.Action.REPLY));
+						RedditPostActions.Action.REPLY));
 				buttonShare.setOnClickListener(v -> post.performAction(
 						activity,
-						RedditPreparedPost.Action.SHARE));
+						RedditPostActions.Action.SHARE));
 				buttonMore.setOnClickListener(v -> post.performAction(
 						activity,
-						RedditPreparedPost.Action.ACTION_MENU));
+						RedditPostActions.Action.ACTION_MENU));
 
 				changeListener = thingIdAndType -> {
 
@@ -181,8 +192,11 @@ public class RedditPostHeaderView extends LinearLayout {
 					subtitle.setContentDescription(
 							post.buildAccessibilitySubtitle(activity, true));
 
-					final boolean isUpvoted = changeDataManager.isUpvoted(post.src);
-					final boolean isDownvoted = changeDataManager.isDownvoted(post.src);
+					final boolean isUpvoted = changeDataManager.isUpvoted(
+							post.src.getIdAndType());
+
+					final boolean isDownvoted = changeDataManager.isDownvoted(
+							post.src.getIdAndType());
 
 					if(isUpvoted) {
 						buttonAddUpvote.setVisibility(GONE);
@@ -213,12 +227,13 @@ public class RedditPostHeaderView extends LinearLayout {
 			}
 
 			mChangeListenerAddTask = () -> {
-				changeDataManager.addListener(post.src, changeListener);
+				changeDataManager.addListener(post.src.getIdAndType(), changeListener);
 				changeListener.onRedditDataChange(post.src.getIdAndType());
 			};
 
-			mChangeListenerRemoveTask
-					= () -> changeDataManager.removeListener(post.src, changeListener);
+			mChangeListenerRemoveTask = () -> changeDataManager.removeListener(
+					post.src.getIdAndType(),
+					changeListener);
 
 		} else {
 			mChangeListenerAddTask = null;

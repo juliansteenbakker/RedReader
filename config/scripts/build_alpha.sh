@@ -4,7 +4,9 @@ source ~/.bashrc
 
 function main() {
 
+set -o pipefail
 set -e
+set -x
 
 cd ~/build
 
@@ -15,7 +17,6 @@ echo "Build number $BUILD_NUMBER"
 
 cd RedReader
 
-#gradle clean
 git reset --hard
 git clean -xdf
 
@@ -38,8 +39,8 @@ fi
 
 echo "Changing package..."
 git mv src/main/java/org/quantumbadger/redreader src/main/java/org/quantumbadger/redreaderalpha
-find . -type f -not -path "*/.git/*" -not -name "README.md" -exec sed -i 's/org\.quantumbadger\.redreader/org.quantumbadger.redreaderalpha/g' {} \;
-find . -type f -not -path "*/.git/*" -exec sed -i 's/org\/quantumbadger\/redreader/org\/quantumbadger\/redreaderalpha/g' {} \;
+find . -type f -not -path "*/.git/*" -not -path "*/config/scripts/*" -not -name "README.md" -exec sed -i 's/org\.quantumbadger\.redreader/org.quantumbadger.redreaderalpha/g' {} \;
+find . -type f -not -path "*/.git/*" -not -path "*/config/scripts/*" -exec sed -i 's/org\/quantumbadger\/redreader/org\/quantumbadger\/redreaderalpha/g' {} \;
 
 echo "Changing icon..."
 sed -i 's/@drawable\/icon/@drawable\/icon_inv/g' src/main/AndroidManifest.xml
@@ -47,8 +48,8 @@ sed -i 's/@mipmap\/icon/@mipmap\/icon_inv/g' src/main/AndroidManifest.xml
 
 echo "Changing name..."
 find src/main/res -name "strings.xml" -exec sed -i 's/RedReader/RedReader Alpha '"$BUILD_NUMBER"'/g' {} \;
-sed -i 's/versionName ".*/versionName "Alpha '"${BUILD_NUMBER}"'"/g' build.gradle
-sed -i 's/versionCode .*/versionCode '"$((${BUILD_NUMBER} + 10000))"'/g' build.gradle
+sed -i 's/versionName = ".*/versionName = "Alpha '"${BUILD_NUMBER}"'"/g' build.gradle.kts
+sed -i 's/versionCode .*/versionCode = '"$((${BUILD_NUMBER} + 10000))"'/g' build.gradle.kts
 
 echo "Building..."
 

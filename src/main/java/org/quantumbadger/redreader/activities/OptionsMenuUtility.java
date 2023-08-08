@@ -598,9 +598,7 @@ public final class OptionsMenuUtility {
 								? R.string.options_account_manager
 								: R.string.options_accounts))
 						.setOnMenuItemClickListener(item -> {
-							new AccountListDialog().show(
-									activity.getSupportFragmentManager(),
-									null);
+							AccountListDialog.show(activity);
 							return true;
 						});
 
@@ -1033,6 +1031,11 @@ public final class OptionsMenuUtility {
 		}
 
 		boolean equalsBaseAndType(final Sort sort) {
+
+			if(sort == null) {
+				return false;
+			}
+
 			if(!sort.getClass().equals(sorts[0].getClass())) {
 				return false;
 			}

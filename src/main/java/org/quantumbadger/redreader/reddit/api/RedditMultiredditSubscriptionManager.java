@@ -22,8 +22,10 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import org.quantumbadger.redreader.account.RedditAccount;
+import org.quantumbadger.redreader.common.RRError;
 import org.quantumbadger.redreader.common.TimestampBound;
 import org.quantumbadger.redreader.common.collections.WeakReferenceListManager;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.io.RawObjectDB;
 import org.quantumbadger.redreader.io.RequestResponseHandler;
 import org.quantumbadger.redreader.io.WritableHashSet;
@@ -92,7 +94,7 @@ public class RedditMultiredditSubscriptionManager {
 
 	private synchronized void onNewSubscriptionListReceived(
 			final HashSet<String> newSubscriptions,
-			final long timestamp) {
+			final TimestampUTC timestamp) {
 
 		mMultireddits = new WritableHashSet(
 				newSubscriptions,
@@ -112,7 +114,7 @@ public class RedditMultiredditSubscriptionManager {
 	public void triggerUpdate(
 			@Nullable final RequestResponseHandler<
 					HashSet<String>,
-					SubredditRequestFailure> handler,
+					RRError> handler,
 			@NonNull final TimestampBound timestampBound) {
 
 		if(mMultireddits != null
@@ -123,11 +125,11 @@ public class RedditMultiredditSubscriptionManager {
 		new RedditAPIMultiredditListRequester(mContext, mUser).performRequest(
 				RedditAPIMultiredditListRequester.Key.INSTANCE,
 				timestampBound,
-				new RequestResponseHandler<WritableHashSet, SubredditRequestFailure>() {
+				new RequestResponseHandler<WritableHashSet, RRError>() {
 
 					// TODO handle failed requests properly -- retry? then notify listeners
 					@Override
-					public void onRequestFailed(final SubredditRequestFailure failureReason) {
+					public void onRequestFailed(final RRError failureReason) {
 						if(handler != null) {
 							handler.onRequestFailed(failureReason);
 						}
@@ -136,7 +138,7 @@ public class RedditMultiredditSubscriptionManager {
 					@Override
 					public void onRequestSuccess(
 							final WritableHashSet result,
-							final long timeCached) {
+							final TimestampUTC timeCached) {
 						final HashSet<String> newSubscriptions = result.toHashset();
 						onNewSubscriptionListReceived(newSubscriptions, timeCached);
 						if(handler != null) {
@@ -145,10 +147,6 @@ public class RedditMultiredditSubscriptionManager {
 					}
 				}
 		);
-	}
-
-	public Long getSubscriptionListTimestamp() {
-		return mMultireddits != null ? mMultireddits.getTimestamp() : null;
 	}
 
 	public interface MultiredditListChangeListener {

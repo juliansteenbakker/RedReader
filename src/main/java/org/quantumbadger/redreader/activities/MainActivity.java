@@ -19,8 +19,6 @@ package org.quantumbadger.redreader.activities;
 
 import android.app.AlertDialog;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -37,12 +35,15 @@ import android.widget.AutoCompleteTextView;
 import android.widget.FrameLayout;
 import android.widget.Spinner;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.quantumbadger.redreader.R;
+import org.quantumbadger.redreader.RedReader;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.account.RedditAccountChangeListener;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.adapters.MainMenuSelectionListener;
+import org.quantumbadger.redreader.common.AndroidCommon;
 import org.quantumbadger.redreader.common.DialogUtils;
 import org.quantumbadger.redreader.common.FeatureFlagHandler;
 import org.quantumbadger.redreader.common.General;
@@ -50,6 +51,7 @@ import org.quantumbadger.redreader.common.LinkHandler;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.SharedPrefsWrapper;
 import org.quantumbadger.redreader.common.collections.CollectionStream;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.fragments.AccountListDialog;
 import org.quantumbadger.redreader.fragments.ChangelogDialog;
 import org.quantumbadger.redreader.fragments.CommentListingFragment;
@@ -62,6 +64,7 @@ import org.quantumbadger.redreader.reddit.PostCommentSort;
 import org.quantumbadger.redreader.reddit.PostSort;
 import org.quantumbadger.redreader.reddit.RedditSubredditHistory;
 import org.quantumbadger.redreader.reddit.UserCommentSort;
+import org.quantumbadger.redreader.reddit.api.RedditOAuth;
 import org.quantumbadger.redreader.reddit.api.RedditSubredditSubscriptionManager;
 import org.quantumbadger.redreader.reddit.api.SubredditSubscriptionState;
 import org.quantumbadger.redreader.reddit.prepared.RedditPreparedPost;
@@ -145,28 +148,23 @@ public class MainActivity extends RefreshableActivity
 			return;
 		}
 
+		if(!PrefsUtility.isRedditUserAgreementAccepted()
+				&& !PrefsUtility.isRedditUserAgreementDeclined()) {
+			RedditTermsActivity.launch(this, true);
+			finish();
+			return;
+		}
+
 		final SharedPrefsWrapper sharedPreferences = General.getSharedPrefs(this);
 		twoPane = General.isTablet(this);
-
-		doRefresh(RefreshableFragment.MAIN_RELAYOUT, false, null);
-
-		if(savedInstanceState == null
-				&& PrefsUtility.pref_behaviour_skiptofrontpage()) {
-			onSelected(SubredditPostListURL.getFrontPage());
-		}
 
 		setTitle(R.string.app_name);
 
 		RedditAccountManager.getInstance(this).addUpdateListener(this);
 
-		final PackageInfo pInfo;
-		try {
-			pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-		} catch(final PackageManager.NameNotFoundException e) {
-			throw new RuntimeException(e);
-		}
+		final AndroidCommon.PackageInfo pInfo = RedReader.getInstance(this).getPackageInfo();
 
-		final int appVersion = pInfo.versionCode;
+		final int appVersion = pInfo.getVersionCode();
 
 		Log.i(TAG, "[Migration] App version: " + appVersion);
 
@@ -207,12 +205,24 @@ public class MainActivity extends RefreshableActivity
 
 		FeatureFlagHandler.handleUpgrade(this);
 
+		if(RedditOAuth.anyNeedRelogin(this)) {
+			General.showMustReloginDialog(this);
+		}
+
 		recreateSubscriptionListener();
+
 //
 //		final boolean startInbox = getIntent().getBooleanExtra("isNewMessage", false);
 //		if(startInbox) {
 //			startActivity(new Intent(this, InboxListingActivity.class));
 //		}
+
+		doRefresh(RefreshableFragment.MAIN_RELAYOUT, false, null);
+
+		if(savedInstanceState == null
+				&& PrefsUtility.pref_behaviour_skiptofrontpage()) {
+			onSelected(SubredditPostListURL.getFrontPage());
+		}
 	}
 
 	private void recreateSubscriptionListener() {
@@ -316,6 +326,17 @@ public class MainActivity extends RefreshableActivity
 				final String[] typeReturnValues = getResources().getStringArray(
 						R.array.mainmenu_custom_destination_type_return);
 
+				if(PrefsUtility.pref_menus_mainmenu_shortcutitems().contains(
+						MainMenuFragment.MainMenuShortcutItems.SUBREDDIT_SEARCH)) {
+
+					for(int i = 0; i < typeReturnValues.length; i++) {
+						if(typeReturnValues[i].equals("user")) {
+							destinationType.setSelection(i);
+							break;
+						}
+					}
+				}
+
 				final ArrayList<SubredditCanonicalId> subredditHistory
 						= RedditSubredditHistory.getSubredditsSorted(
 						RedditAccountManager.getInstance(this).getDefaultAccount());
@@ -394,8 +415,8 @@ public class MainActivity extends RefreshableActivity
 				destinationType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
 					@Override
 					public void onItemSelected(
-							final AdapterView<?> adapterView,
-							final View view,
+							@Nullable final AdapterView<?> adapterView,
+							@Nullable final View view,
 							final int i,
 							final long l) {
 
@@ -448,6 +469,10 @@ public class MainActivity extends RefreshableActivity
 				intent.putExtra("inboxType", "modmail");
 				startActivity(intent);
 				break;
+			}
+
+			case MainMenuFragment.MENU_MENU_ACTION_FIND_SUBREDDIT: {
+				startActivity(new Intent(this, SubredditSearchActivity.class));
 			}
 		}
 	}
@@ -1051,7 +1076,7 @@ public class MainActivity extends RefreshableActivity
 	public void onSessionChanged(
 			final UUID session,
 			final SessionChangeType type,
-			final long timestamp) {
+			final TimestampUTC timestamp) {
 
 		switch(type) {
 			case POSTS:

@@ -17,18 +17,18 @@
 
 package org.quantumbadger.redreader.reddit;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import org.quantumbadger.redreader.activities.BugReportActivity;
-import org.quantumbadger.redreader.cache.CacheRequest;
+import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.RRError;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.http.FailedRequestBody;
 import org.quantumbadger.redreader.reddit.things.RedditUser;
 
 import java.util.ArrayList;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 public abstract class APIResponseHandler {
 
@@ -53,26 +53,11 @@ public abstract class APIResponseHandler {
 
 	protected abstract void onCallbackException(Throwable t);
 
-	protected abstract void onFailure(
-			@CacheRequest.RequestFailureType int type,
-			@Nullable Throwable t,
-			@Nullable Integer status,
-			@Nullable String readableMessage,
-			@NonNull Optional<FailedRequestBody> response);
+	protected abstract void onFailure(@NonNull RRError error);
 
-	protected abstract void onFailure(
-			@NonNull APIFailureType type,
-			@Nullable String debuggingContext,
-			@NonNull Optional<FailedRequestBody> response);
-
-	public final void notifyFailure(
-			final @CacheRequest.RequestFailureType int type,
-			@Nullable final Throwable t,
-			@Nullable final Integer status,
-			@Nullable final String readableMessage,
-			@NonNull final Optional<FailedRequestBody> response) {
+	public final void notifyFailure(@NonNull final RRError error) {
 		try {
-			onFailure(type, t, status, readableMessage, response);
+			onFailure(error);
 		} catch(final Throwable t1) {
 			try {
 				onCallbackException(t1);
@@ -88,16 +73,11 @@ public abstract class APIResponseHandler {
 			@Nullable final String debuggingContext,
 			@NonNull final Optional<FailedRequestBody> response) {
 
-		try {
-			onFailure(type, debuggingContext, response);
-		} catch(final Throwable t1) {
-			try {
-				onCallbackException(t1);
-			} catch(final Throwable t2) {
-				BugReportActivity.addGlobalError(new RRError(null, null, true, t1));
-				BugReportActivity.handleGlobalError(context, t2);
-			}
-		}
+		notifyFailure(General.getGeneralErrorForFailure(
+				context,
+				type,
+				debuggingContext,
+				response));
 	}
 
 	public static abstract class SubmitResponseHandler extends APIResponseHandler {
@@ -135,13 +115,35 @@ public abstract class APIResponseHandler {
 		protected abstract void onSuccess();
 	}
 
+	public static abstract class ValueResponseHandler<E> extends APIResponseHandler {
+
+		protected ValueResponseHandler(final AppCompatActivity context) {
+			super(context);
+		}
+
+		public final void notifySuccess(@NonNull final E value) {
+			try {
+				onSuccess(value);
+			} catch(final Throwable t1) {
+				try {
+					onCallbackException(t1);
+				} catch(final Throwable t2) {
+					BugReportActivity.addGlobalError(new RRError(null, null, true, t1));
+					BugReportActivity.handleGlobalError(context, t2);
+				}
+			}
+		}
+
+		protected abstract void onSuccess(@NonNull final E value);
+	}
+
 	public static abstract class UserResponseHandler extends APIResponseHandler {
 
 		protected UserResponseHandler(final AppCompatActivity context) {
 			super(context);
 		}
 
-		public final void notifySuccess(final RedditUser result, final long timestamp) {
+		public final void notifySuccess(final RedditUser result, final TimestampUTC timestamp) {
 			try {
 				onSuccess(result, timestamp);
 			} catch(final Throwable t1) {
@@ -169,6 +171,6 @@ public abstract class APIResponseHandler {
 
 		protected abstract void onDownloadStarted();
 
-		protected abstract void onSuccess(RedditUser result, long timestamp);
+		protected abstract void onSuccess(RedditUser result, TimestampUTC timestamp);
 	}
 }

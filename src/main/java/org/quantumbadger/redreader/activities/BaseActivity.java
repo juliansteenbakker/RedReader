@@ -33,6 +33,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.GlobalExceptionHandler;
+import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.SharedPrefsWrapper;
 import org.quantumbadger.redreader.common.TorCommon;
@@ -55,7 +56,7 @@ public abstract class BaseActivity extends AppCompatActivity
 	private final HashMap<Integer, ActivityResultCallback> mActivityResultCallbacks
 			= new HashMap<>();
 
-	private TextView mActionbarTitleTextView;
+	@NonNull private Optional<TextView> mActionbarTitleTextView = Optional.empty();
 
 	private FrameLayout mContentListing;
 	private FrameLayout mContentOverlay;
@@ -67,6 +68,10 @@ public abstract class BaseActivity extends AppCompatActivity
 		return true;
 	}
 
+	protected boolean baseActivityIsToolbarSearchBarEnabled() {
+		return false;
+	}
+
 	protected boolean baseActivityIsActionBarBackEnabled() {
 		return true;
 	}
@@ -74,10 +79,7 @@ public abstract class BaseActivity extends AppCompatActivity
 	@Override
 	public void setTitle(final CharSequence text) {
 		super.setTitle(text);
-
-		if(mActionbarTitleTextView != null) {
-			mActionbarTitleTextView.setText(text);
-		}
+		mActionbarTitleTextView.apply(titleView -> titleView.setText(text));
 	}
 
 	@Override
@@ -173,25 +175,28 @@ public abstract class BaseActivity extends AppCompatActivity
 					WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		}
 
+		if(PrefsUtility.behaviour_block_screenshots()) {
+			getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+		}
+
+		if(PrefsUtility.pref_behaviour_keep_screen_awake()) {
+			getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		}
 
 		mSharedPreferences.registerOnSharedPreferenceChangeListener(this);
 		setOrientationFromPrefs();
 		closeIfNecessary();
 
-// TODO: Not supported
-
 //		if(baseActivityIsToolbarActionBarEnabled()) {
 //
 //			final View outerView;
 //
-//			final boolean isTablet = General.isTablet(this, mSharedPreferences);
+//			final boolean isTablet = General.isTablet(this);
 //
 //			final boolean prefBottomToolbar
-//					= PrefsUtility.pref_appearance_bottom_toolbar(this, mSharedPreferences);
+//					= PrefsUtility.pref_appearance_bottom_toolbar();
 //
-//			final boolean prefHideOnScroll = PrefsUtility.pref_appearance_hide_toolbar_on_scroll(
-//					this,
-//					mSharedPreferences);
+//			final boolean prefHideOnScroll = PrefsUtility.pref_appearance_hide_toolbar_on_scroll();
 //
 //			final int layoutRes;
 //
@@ -219,14 +224,29 @@ public abstract class BaseActivity extends AppCompatActivity
 //			super.setContentView(outerView);
 //			setSupportActionBar(toolbar);
 //
-//			getSupportActionBarOrThrow().setCustomView(R.layout.actionbar_title);
-//			getSupportActionBarOrThrow().setDisplayShowCustomEnabled(true);
-//			getSupportActionBarOrThrow().setDisplayShowTitleEnabled(false);
+//			final ActionBar supportActionBar = getSupportActionBarOrThrow();
+//
+//			if(baseActivityIsToolbarSearchBarEnabled()) {
+//				supportActionBar.setCustomView(R.layout.actionbar_search);
+//				General.setLayoutMatchParent(supportActionBar.getCustomView());
+//
+//			} else {
+//				supportActionBar.setCustomView(R.layout.actionbar_title);
+//			}
+//
+//			supportActionBar.setDisplayShowCustomEnabled(true);
+//			supportActionBar.setDisplayShowTitleEnabled(false);
 //			toolbar.setContentInsetsAbsolute(0, 0);
 //
-//			mActionbarTitleTextView = toolbar.findViewById(R.id.actionbar_title_text);
 //			mActionbarBackIconView = toolbar.findViewById(R.id.actionbar_title_back_image);
 //			mActionbarTitleOuterView = toolbar.findViewById(R.id.actionbar_title_outer);
+//
+//			if(baseActivityIsToolbarSearchBarEnabled()) {
+//				mActionbarTitleTextView = Optional.empty();
+//			} else {
+//				mActionbarTitleTextView = Optional.of(
+//						toolbar.findViewById(R.id.actionbar_title_text));
+//			}
 //
 //			if(getTitle() != null) {
 //				// Update custom action bar text
@@ -240,9 +260,7 @@ public abstract class BaseActivity extends AppCompatActivity
 //			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 //
 //				final PrefsUtility.AppearanceNavbarColour navbarColour
-//						= PrefsUtility.appearance_navbar_colour(
-//								this,
-//								mSharedPreferences);
+//						= PrefsUtility.appearance_navbar_colour();
 //
 //				if(navbarColour == PrefsUtility.AppearanceNavbarColour.BLACK) {
 //					getWindow().setNavigationBarColor(Color.BLACK);
@@ -262,16 +280,7 @@ public abstract class BaseActivity extends AppCompatActivity
 //						} else {
 //							colour = appearance.getColor(1, General.COLOR_INVALID);
 //						}
-//
-//						appearance.recycle();
-//					}
-//
-//					getWindow().setNavigationBarColor(colour);
-//				}
-//			}
-//
-//		} else {
-//	}
+// TODO: Not supported
 			mContentListing = new FrameLayout(this);
 			mContentOverlay = new FrameLayout(this);
 

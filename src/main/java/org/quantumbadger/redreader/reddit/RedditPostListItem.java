@@ -25,7 +25,8 @@ import org.quantumbadger.redreader.fragments.PostListingFragment;
 import org.quantumbadger.redreader.reddit.prepared.RedditPreparedPost;
 import org.quantumbadger.redreader.views.RedditPostView;
 
-public class RedditPostListItem extends GroupedRecyclerViewAdapter.Item {
+public class RedditPostListItem
+		extends GroupedRecyclerViewAdapter.Item<RecyclerView.ViewHolder> {
 
 	private final PostListingFragment mFragment;
 	private final BaseActivity mActivity;

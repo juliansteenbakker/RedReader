@@ -26,14 +26,15 @@ import org.quantumbadger.redreader.activities.BaseActivity;
 import org.quantumbadger.redreader.adapters.GroupedRecyclerViewAdapter;
 import org.quantumbadger.redreader.common.RRThemeAttributes;
 import org.quantumbadger.redreader.fragments.CommentListingFragment;
+import org.quantumbadger.redreader.reddit.kthings.RedditMore;
 import org.quantumbadger.redreader.reddit.prepared.RedditChangeDataManager;
 import org.quantumbadger.redreader.reddit.prepared.RedditRenderableComment;
-import org.quantumbadger.redreader.reddit.things.RedditMoreComments;
 import org.quantumbadger.redreader.reddit.url.RedditURLParser;
 import org.quantumbadger.redreader.views.LoadMoreCommentsView;
 import org.quantumbadger.redreader.views.RedditCommentView;
 
-public class RedditCommentListItem extends GroupedRecyclerViewAdapter.Item {
+public class RedditCommentListItem
+		extends GroupedRecyclerViewAdapter.Item<RecyclerView.ViewHolder> {
 
 	public enum Type {
 		COMMENT, LOAD_MORE
@@ -48,7 +49,7 @@ public class RedditCommentListItem extends GroupedRecyclerViewAdapter.Item {
 	private final RedditURLParser.RedditURL mCommentListingUrl;
 
 	private final RedditRenderableComment mComment;
-	private final RedditMoreComments mMoreComments;
+	private final RedditMore mMoreComments;
 
 	private final RedditChangeDataManager mChangeDataManager;
 
@@ -78,7 +79,7 @@ public class RedditCommentListItem extends GroupedRecyclerViewAdapter.Item {
 	}
 
 	public RedditCommentListItem(
-			final RedditMoreComments moreComments,
+			final RedditMore moreComments,
 			final RedditCommentListItem parent,
 			final CommentListingFragment fragment,
 			final BaseActivity activity,
@@ -119,7 +120,7 @@ public class RedditCommentListItem extends GroupedRecyclerViewAdapter.Item {
 		return mComment;
 	}
 
-	public RedditMoreComments asLoadMore() {
+	public RedditMore asLoadMore() {
 
 		if(!isLoadMore()) {
 			throw new RuntimeException("Called asLoadMore() on non-load-more item");

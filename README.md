@@ -16,7 +16,7 @@ An unofficial, open source WearOS client for Reddit based on RedReader.
 Features
 --------
 
-* Free and open-source Software - no ads/tracking
+* Free and open source, with no ads or tracking
 * Lightweight and fast
 * Swipe posts left and right to perform customizable actions, such as
     upvote/downvote, or save/hide
@@ -27,7 +27,9 @@ Features
 * Image and comment precaching (optional: always, never, or Wi-Fi only)
 * Built-in image viewer, and GIF/video player
 * Multiple themes, including night mode, and ultra black for AMOLED displays
-* Support for Android 4.0+F
+* Support for Android 4.0+
+* Translations for multiple languages
+* Accessibility features and optimization for screen reader use
 
 
 Downloading
@@ -82,4 +84,4 @@ included in [LICENSE.txt](LICENSE.txt).
 Thanks
 ------
 
-A full list of contributors is included in the [changelog](assets/changelog.txt).
+A full list of contributors is included in the [changelog](src/main/assets/changelog.txt).

@@ -32,7 +32,6 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.cache.CacheManager;
@@ -46,6 +45,7 @@ import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.Priority;
 import org.quantumbadger.redreader.common.RRError;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.http.FailedRequestBody;
 import org.quantumbadger.redreader.http.body.HTTPRequestBodyMultipart;
 import org.quantumbadger.redreader.http.body.multipart.PartFormDataBinary;
@@ -179,30 +179,47 @@ public class ImgurUploadActivity extends BaseActivity {
 				try {
 					final ParcelFileDescriptor file
 							= getContentResolver().openFileDescriptor(uri, "r");
-					final long statSize = file.getStatSize();
 
-					if(statSize >= 10 * 1000 * 1000) { // Use base 10 just to be safe...
-						General.showResultDialog(
-								ImgurUploadActivity.this,
-								new RRError(
-										getString(R.string.error_file_too_big_title),
-										getString(
-												R.string.error_file_too_big_message,
-												statSize / 1024 + "kB",
-												"10MB"),
-										false));
-						return;
+					final Bitmap thumbnailBitmap;
+					final int width;
+					final int height;
+
+					final long statSize;
+
+					try {
+						statSize = file.getStatSize();
+
+						if (statSize >= 10 * 1000 * 1000) { // Use base 10 just to be safe...
+							General.showResultDialog(
+									ImgurUploadActivity.this,
+									new RRError(
+											getString(R.string.error_file_too_big_title),
+											getString(
+													R.string.error_file_too_big_message,
+													statSize / 1024 + "kB",
+													"10MB"),
+											false));
+							return;
+						}
+
+						final int thumbnailSizePx
+								= General.dpToPixels(ImgurUploadActivity.this, 200);
+
+						final Bitmap rawBitmap = BitmapFactory.decodeFileDescriptor(
+								file.getFileDescriptor());
+
+						width = rawBitmap.getWidth();
+						height = rawBitmap.getHeight();
+
+						thumbnailBitmap = ThumbnailScaler.scaleNoCrop(
+								rawBitmap,
+								thumbnailSizePx);
+
+						rawBitmap.recycle();
+
+					} finally {
+						General.closeSafely(file);
 					}
-
-					final int thumbnailSizePx
-							= General.dpToPixels(ImgurUploadActivity.this, 200);
-
-					final Bitmap rawBitmap
-							= BitmapFactory.decodeFileDescriptor(file.getFileDescriptor());
-					final Bitmap thumbnailBitmap = ThumbnailScaler.scaleNoCrop(
-							rawBitmap,
-							thumbnailSizePx);
-					rawBitmap.recycle();
 
 					final ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
 
@@ -222,8 +239,8 @@ public class ImgurUploadActivity extends BaseActivity {
 						mThumbnailView.setImageBitmap(thumbnailBitmap);
 						mTextView.setText(getString(
 								R.string.image_selected_summary,
-								rawBitmap.getWidth(),
-								rawBitmap.getHeight(),
+								width,
+								height,
 								statSize / 1024 + "kB"));
 						hideLoadingOverlay();
 						updateUploadButtonVisibility();
@@ -270,7 +287,7 @@ public class ImgurUploadActivity extends BaseActivity {
 					@Override
 					public void onJsonParsed(
 							@NonNull final JsonValue result,
-							final long timestamp,
+							final TimestampUTC timestamp,
 							@NonNull final UUID session,
 							final boolean fromCache) {
 
@@ -286,12 +303,13 @@ public class ImgurUploadActivity extends BaseActivity {
 							final Boolean success = root.getBoolean("success");
 
 							if(!Boolean.TRUE.equals(success)) {
-								onFailure(
+								onFailure(General.getGeneralErrorForFailure(
+										ImgurUploadActivity.this,
 										CacheRequest.REQUEST_FAILURE_UPLOAD_FAIL_IMGUR,
 										null,
 										null,
 										null,
-										Optional.of(new FailedRequestBody(result)));
+										Optional.of(new FailedRequestBody(result))));
 								return;
 							}
 
@@ -299,12 +317,13 @@ public class ImgurUploadActivity extends BaseActivity {
 							imageUri = Uri.parse("https://imgur.com/" + id);
 
 						} catch(final Throwable t) {
-							onFailure(
+							onFailure(General.getGeneralErrorForFailure(
+									ImgurUploadActivity.this,
 									CacheRequest.REQUEST_FAILURE_PARSE_IMGUR,
 									t,
 									null,
 									t.toString(),
-									Optional.of(new FailedRequestBody(result)));
+									Optional.of(new FailedRequestBody(result))));
 							return;
 						}
 
@@ -318,22 +337,11 @@ public class ImgurUploadActivity extends BaseActivity {
 					}
 
 					@Override
-					public void onFailure(
-							final int type,
-							@Nullable final Throwable t,
-							@Nullable final Integer httpStatus,
-							@Nullable final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> body) {
+					public void onFailure(@NonNull final RRError error) {
 
 						General.showResultDialog(
 								ImgurUploadActivity.this,
-								General.getGeneralErrorForFailure(
-										ImgurUploadActivity.this,
-										type,
-										t,
-										httpStatus,
-										"https://api.imgur.com/3/image",
-										body));
+								error);
 
 						AndroidCommon.runOnUiThread(ImgurUploadActivity.this::hideLoadingOverlay);
 					}

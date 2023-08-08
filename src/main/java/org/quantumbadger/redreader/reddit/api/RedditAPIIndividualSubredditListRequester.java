@@ -21,7 +21,6 @@ import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.cache.CacheManager;
 import org.quantumbadger.redreader.cache.CacheRequest;
@@ -31,8 +30,10 @@ import org.quantumbadger.redreader.common.Constants;
 import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.Optional;
 import org.quantumbadger.redreader.common.Priority;
+import org.quantumbadger.redreader.common.RRError;
 import org.quantumbadger.redreader.common.TimestampBound;
 import org.quantumbadger.redreader.common.UnexpectedInternalStateException;
+import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.http.FailedRequestBody;
 import org.quantumbadger.redreader.io.CacheDataSource;
 import org.quantumbadger.redreader.io.RequestResponseHandler;
@@ -54,7 +55,7 @@ import java.util.HashSet;
 import java.util.UUID;
 
 public class RedditAPIIndividualSubredditListRequester implements CacheDataSource<
-		RedditSubredditManager.SubredditListType, WritableHashSet, SubredditRequestFailure> {
+		RedditSubredditManager.SubredditListType, WritableHashSet, RRError> {
 
 	private final Context context;
 	private final RedditAccount user;
@@ -70,11 +71,11 @@ public class RedditAPIIndividualSubredditListRequester implements CacheDataSourc
 	public void performRequest(
 			final RedditSubredditManager.SubredditListType type,
 			final TimestampBound timestampBound,
-			final RequestResponseHandler<WritableHashSet, SubredditRequestFailure> handler) {
+			final RequestResponseHandler<WritableHashSet, RRError> handler) {
 
 		if(type == RedditSubredditManager.SubredditListType.DEFAULTS) {
 
-			final long now = System.currentTimeMillis();
+			final TimestampUTC now = TimestampUTC.now();
 
 			final HashSet<String> data =
 					new HashSet<>(Constants.Reddit.DEFAULT_SUBREDDITS.size() + 1);
@@ -108,7 +109,7 @@ public class RedditAPIIndividualSubredditListRequester implements CacheDataSourc
 					return;
 
 				case MODERATED: {
-					final long curTime = System.currentTimeMillis();
+					final TimestampUTC curTime = TimestampUTC.now();
 					handler.onRequestSuccess(
 							new WritableHashSet(
 									new HashSet<>(),
@@ -119,7 +120,7 @@ public class RedditAPIIndividualSubredditListRequester implements CacheDataSourc
 				}
 
 				case MULTIREDDITS: {
-					final long curTime = System.currentTimeMillis();
+					final TimestampUTC curTime = TimestampUTC.now();
 					handler.onRequestSuccess(
 							new WritableHashSet(
 									new HashSet<>(),
@@ -143,7 +144,7 @@ public class RedditAPIIndividualSubredditListRequester implements CacheDataSourc
 
 	private void doSubredditListRequest(
 			final RedditSubredditManager.SubredditListType type,
-			final RequestResponseHandler<WritableHashSet, SubredditRequestFailure> handler,
+			final RequestResponseHandler<WritableHashSet, RRError> handler,
 			final String after) {
 
 		final URI uri;
@@ -191,7 +192,7 @@ public class RedditAPIIndividualSubredditListRequester implements CacheDataSourc
 					@Override
 					public void onJsonParsed(
 							@NonNull final JsonValue result,
-							final long timestamp,
+							final TimestampUTC timestamp,
 							@NonNull final UUID session, final boolean fromCache) {
 
 						try {
@@ -219,7 +220,7 @@ public class RedditAPIIndividualSubredditListRequester implements CacheDataSourc
 								final RedditThing thing = v.asObject(RedditThing.class);
 								final RedditSubreddit subreddit = thing.asSubreddit();
 
-								subreddit.downloadTime = timestamp;
+								subreddit.downloadTime = timestamp.toUtcMs();
 
 								try {
 									output.add(subreddit.getCanonicalId().toString());
@@ -243,17 +244,17 @@ public class RedditAPIIndividualSubredditListRequester implements CacheDataSourc
 										type,
 										new RequestResponseHandler<
 												WritableHashSet,
-												SubredditRequestFailure>() {
+												RRError>() {
 											@Override
 											public void onRequestFailed(
-													final SubredditRequestFailure failureReason) {
+													final RRError failureReason) {
 												handler.onRequestFailed(failureReason);
 											}
 
 											@Override
 											public void onRequestSuccess(
 													final WritableHashSet result,
-													final long timeCached) {
+													final TimestampUTC timeCached) {
 												output.addAll(result.toHashset());
 												handler.onRequestSuccess(new WritableHashSet(
 														output,
@@ -282,31 +283,19 @@ public class RedditAPIIndividualSubredditListRequester implements CacheDataSourc
 							}
 
 						} catch(final Exception e) {
-							handler.onRequestFailed(new SubredditRequestFailure(
+							handler.onRequestFailed(General.getGeneralErrorForFailure(
+									context,
 									CacheRequest.REQUEST_FAILURE_PARSE,
 									e,
 									null,
-									"Parse error",
 									uri != null ? uri.toString() : null,
 									Optional.of(new FailedRequestBody(result))));
 						}
 					}
 
 					@Override
-					public void onFailure(
-							final int type,
-							@Nullable final Throwable t,
-							@Nullable final Integer httpStatus,
-							@Nullable final String readableMessage,
-							@NonNull final Optional<FailedRequestBody> body) {
-
-						handler.onRequestFailed(new SubredditRequestFailure(
-								type,
-								t,
-								httpStatus,
-								readableMessage,
-								uri != null ? uri.toString() : null,
-								body));
+					public void onFailure(@NonNull final RRError error) {
+						handler.onRequestFailed(error);
 					}
 				}));
 
@@ -319,7 +308,7 @@ public class RedditAPIIndividualSubredditListRequester implements CacheDataSourc
 			final TimestampBound timestampBound,
 			final RequestResponseHandler<
 					HashMap<RedditSubredditManager.SubredditListType, WritableHashSet>,
-					SubredditRequestFailure> handler) {
+					RRError> handler) {
 		// TODO batch API? or just make lots of requests and build up a hash map?
 		throw new UnsupportedOperationException();
 	}
