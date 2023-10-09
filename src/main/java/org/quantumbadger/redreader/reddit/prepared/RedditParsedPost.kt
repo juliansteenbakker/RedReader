@@ -17,7 +17,7 @@
 package org.quantumbadger.redreader.reddit.prepared
 
 import androidx.appcompat.app.AppCompatActivity
-import org.quantumbadger.redreader.R
+import dev.steenbakker.wearreader.R
 import org.quantumbadger.redreader.reddit.PostCommentSort
 import org.quantumbadger.redreader.reddit.kthings.RedditIdAndType
 import org.quantumbadger.redreader.reddit.kthings.RedditPost

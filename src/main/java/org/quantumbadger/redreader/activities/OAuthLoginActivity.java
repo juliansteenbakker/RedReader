@@ -27,7 +27,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import info.guardianproject.netcipher.web.WebkitProxy;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.RedReader;
 import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.PrefsUtility;

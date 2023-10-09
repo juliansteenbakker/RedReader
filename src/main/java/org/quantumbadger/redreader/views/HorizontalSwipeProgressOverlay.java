@@ -23,7 +23,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import com.github.lzyzsd.circleprogress.DonutProgress;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.common.General;
 
 public class HorizontalSwipeProgressOverlay extends RelativeLayout {

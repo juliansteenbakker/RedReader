@@ -21,7 +21,7 @@ import android.view.LayoutInflater
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
 import com.google.android.material.textview.MaterialTextView
-import org.quantumbadger.redreader.R
+import dev.steenbakker.wearreader.R
 import org.quantumbadger.redreader.activities.RedditTermsActivity
 import org.quantumbadger.redreader.common.RRError
 import org.quantumbadger.redreader.fragments.AccountListDialog

@@ -22,7 +22,7 @@ import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.widget.RelativeLayout;
 import com.github.lzyzsd.circleprogress.DonutProgress;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.common.General;
 
 public class ButtonLoadingSpinnerView extends RelativeLayout {

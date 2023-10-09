@@ -18,7 +18,7 @@
 package org.quantumbadger.redreader.common.time
 
 import android.content.res.Resources
-import org.quantumbadger.redreader.R
+import dev.steenbakker.wearreader.R
 
 class TimeStringsImpl constructor(
 		private val resources: Resources

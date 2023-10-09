@@ -20,7 +20,7 @@ package org.quantumbadger.redreader.activities;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.common.General;
 import org.quantumbadger.redreader.common.PrefsUtility;
 import org.quantumbadger.redreader.common.SharedPrefsWrapper;

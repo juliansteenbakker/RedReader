@@ -31,7 +31,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;

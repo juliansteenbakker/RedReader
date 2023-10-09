@@ -20,7 +20,7 @@ package org.quantumbadger.redreader.common;
 import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 
 import java.util.Locale;
 

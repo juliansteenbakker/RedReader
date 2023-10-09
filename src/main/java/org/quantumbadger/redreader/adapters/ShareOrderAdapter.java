@@ -27,7 +27,7 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatDialogFragment;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 
 import java.util.List;
 

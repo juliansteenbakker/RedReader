@@ -21,7 +21,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.widget.LinearLayout;
 import androidx.annotation.NonNull;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.activities.BaseActivity;
 import org.quantumbadger.redreader.reddit.kthings.RedditComment;
 import org.quantumbadger.redreader.reddit.kthings.RedditFieldEdited;

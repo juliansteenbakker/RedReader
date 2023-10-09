@@ -25,7 +25,7 @@ import android.widget.RelativeLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.github.lzyzsd.circleprogress.DonutProgress;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.common.General;
 
 public class LoadingSpinnerView extends RelativeLayout {

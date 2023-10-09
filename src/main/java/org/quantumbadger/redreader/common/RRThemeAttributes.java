@@ -19,7 +19,7 @@ package org.quantumbadger.redreader.common;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 
 import java.util.EnumSet;
 

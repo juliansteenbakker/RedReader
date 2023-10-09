@@ -27,7 +27,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.activities.BaseActivity;
@@ -483,19 +483,19 @@ public class RedditCommentView extends FlingableItemView
 		}
 
 		// TODO null
-		if (mComment.asComment().getParsedComment().getRawComment()
-				.getAuthor().getDecoded().equalsIgnoreCase(defaultAccount.username)) {
-
-			addAccessibilityActionFromDescriptionPair(
-				new ActionDescriptionPair(
-					RedditAPICommentAction.RedditCommentAction.EDIT,
-					R.string.action_edit));
-
-			addAccessibilityActionFromDescriptionPair(
-				new ActionDescriptionPair(
-					RedditAPICommentAction.RedditCommentAction.DELETE,
-					R.string.action_delete));
-		}
+//		if (mComment.asComment().getParsedComment().getRawComment()
+//				.getAuthor().getDecoded().equalsIgnoreCase(defaultAccount.username)) {
+//
+//			addAccessibilityActionFromDescriptionPair(
+//				new ActionDescriptionPair(
+//					RedditAPICommentAction.RedditCommentAction.EDIT,
+//					R.string.action_edit));
+//
+//			addAccessibilityActionFromDescriptionPair(
+//				new ActionDescriptionPair(
+//					RedditAPICommentAction.RedditCommentAction.DELETE,
+//					R.string.action_delete));
+//		}
 
 		// #136: When "save" is implemented for comments, add an a11y action
 		// here (behind an isAuthenticated guard).

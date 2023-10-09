@@ -28,7 +28,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.TooltipCompat;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.activities.PostSubmitActivity;
@@ -114,10 +114,10 @@ public class SubredditToolbar extends LinearLayout implements
 		final RedditAccount currentUser =
 				RedditAccountManager.getInstance(mContext).getDefaultAccount();
 
-		final ImageButton buttonSubscribe = Objects.requireNonNull(
-				(ImageButton)findViewById(R.id.subreddit_toolbar_button_subscribe));
-		final ImageButton buttonUnsubscribe = Objects.requireNonNull(
-				(ImageButton)findViewById(R.id.subreddit_toolbar_button_unsubscribe));
+//		final ImageButton buttonSubscribe = Objects.requireNonNull(
+//				(ImageButton)findViewById(R.id.subreddit_toolbar_button_subscribe));
+//		final ImageButton buttonUnsubscribe = Objects.requireNonNull(
+//				(ImageButton)findViewById(R.id.subreddit_toolbar_button_unsubscribe));
 		final FrameLayout buttonSubscribeLoading = Objects.requireNonNull(
 				(FrameLayout)findViewById(R.id.subreddit_toolbar_button_subscribe_loading));
 
@@ -126,12 +126,12 @@ public class SubredditToolbar extends LinearLayout implements
 		final ImageButton buttonUnpin = Objects.requireNonNull(
 				(ImageButton)findViewById(R.id.subreddit_toolbar_button_unpin));
 
-		final ImageButton buttonSubmit = Objects.requireNonNull(
-				(ImageButton)findViewById(R.id.subreddit_toolbar_button_submit));
-		final ImageButton buttonShare = Objects.requireNonNull(
-				(ImageButton)findViewById(R.id.subreddit_toolbar_button_share));
-		mButtonInfo = Objects.requireNonNull(
-				(ImageButton)findViewById(R.id.subreddit_toolbar_button_info));
+//		final ImageButton buttonSubmit = Objects.requireNonNull(
+//				(ImageButton)findViewById(R.id.subreddit_toolbar_button_submit));
+//		final ImageButton buttonShare = Objects.requireNonNull(
+//				(ImageButton)findViewById(R.id.subreddit_toolbar_button_share));
+//		mButtonInfo = Objects.requireNonNull(
+//				(ImageButton)findViewById(R.id.subreddit_toolbar_button_info));
 
 		for(int i = 0; i < getChildCount(); i++) {
 			final View button = getChildAt(i);
@@ -153,19 +153,19 @@ public class SubredditToolbar extends LinearLayout implements
 
 			if(subscriptionState == SubredditSubscriptionState.SUBSCRIBED) {
 
-				buttonSubscribe.setVisibility(GONE);
-				buttonUnsubscribe.setVisibility(VISIBLE);
+//				buttonSubscribe.setVisibility(GONE);
+//				buttonUnsubscribe.setVisibility(VISIBLE);
 				buttonSubscribeLoading.setVisibility(GONE);
 
 			} else if(subscriptionState == SubredditSubscriptionState.NOT_SUBSCRIBED) {
 
-				buttonSubscribe.setVisibility(VISIBLE);
-				buttonUnsubscribe.setVisibility(GONE);
+//				buttonSubscribe.setVisibility(VISIBLE);
+//				buttonUnsubscribe.setVisibility(GONE);
 				buttonSubscribeLoading.setVisibility(GONE);
 
 			} else {
-				buttonSubscribe.setVisibility(GONE);
-				buttonUnsubscribe.setVisibility(GONE);
+//				buttonSubscribe.setVisibility(GONE);
+//				buttonUnsubscribe.setVisibility(GONE);
 				buttonSubscribeLoading.setVisibility(VISIBLE);
 			}
 		};
@@ -203,27 +203,27 @@ public class SubredditToolbar extends LinearLayout implements
 
 			final OnClickListener mustBeLoggedInListener
 					= v -> General.showMustBeLoggedInDialog(activity);
-
-			buttonSubscribe.setOnClickListener(mustBeLoggedInListener);
-			buttonUnsubscribe.setOnClickListener(mustBeLoggedInListener);
-			buttonSubmit.setOnClickListener(mustBeLoggedInListener);
+//
+//			buttonSubscribe.setOnClickListener(mustBeLoggedInListener);
+//			buttonUnsubscribe.setOnClickListener(mustBeLoggedInListener);
+//			buttonSubmit.setOnClickListener(mustBeLoggedInListener);
 
 		} else {
-			buttonSubscribe.setOnClickListener(v -> subscriptionManager.subscribe(
-					mSubredditDetails.get().id,
-					activity));
-
-			buttonUnsubscribe.setOnClickListener(v -> subscriptionManager.unsubscribe(
-					mSubredditDetails.get().id,
-					activity));
-
-			buttonSubmit.setOnClickListener(v -> {
-				final Intent intent = new Intent(
-						activity,
-						PostSubmitActivity.class);
-				intent.putExtra("subreddit", mSubredditDetails.get().id.toString());
-				activity.startActivity(intent);
-			});
+//			buttonSubscribe.setOnClickListener(v -> subscriptionManager.subscribe(
+//					mSubredditDetails.get().id,
+//					activity));
+//
+//			buttonUnsubscribe.setOnClickListener(v -> subscriptionManager.unsubscribe(
+//					mSubredditDetails.get().id,
+//					activity));
+//
+//			buttonSubmit.setOnClickListener(v -> {
+//				final Intent intent = new Intent(
+//						activity,
+//						PostSubmitActivity.class);
+//				intent.putExtra("subreddit", mSubredditDetails.get().id.toString());
+//				activity.startActivity(intent);
+//			});
 		}
 
 		buttonPin.setOnClickListener(v -> PrefsUtility.pref_pinned_subreddits_add(
@@ -234,10 +234,10 @@ public class SubredditToolbar extends LinearLayout implements
 				mContext,
 				mSubredditDetails.get().id));
 
-		buttonShare.setOnClickListener(v -> LinkHandler.shareText(
-				activity,
-				mSubredditDetails.get().id.toString(),
-				mUrl.orElse(mSubredditDetails.get().url)));
+//		buttonShare.setOnClickListener(v -> LinkHandler.shareText(
+//				activity,
+//				mSubredditDetails.get().id.toString(),
+//				mUrl.orElse(mSubredditDetails.get().url)));
 
 		mButtonInfo.setOnClickListener(
 				v -> mSubredditDetails.get().showSidebarActivity(activity));

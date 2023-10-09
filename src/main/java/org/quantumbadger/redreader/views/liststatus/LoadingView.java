@@ -25,7 +25,7 @@ import android.text.TextUtils;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 
 import java.util.Locale;
 

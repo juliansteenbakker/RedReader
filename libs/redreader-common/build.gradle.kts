@@ -9,7 +9,7 @@ buildscript {
 plugins {
     id("java-library")
     id("org.jetbrains.kotlin.jvm")
-	kotlin("plugin.serialization") version("1.6.21") apply(true)
+	kotlin("plugin.serialization") version("1.8.0") apply(true)
 }
 
 java {

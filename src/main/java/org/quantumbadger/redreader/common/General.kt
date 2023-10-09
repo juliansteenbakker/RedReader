@@ -38,8 +38,8 @@ import android.view.WindowManager.BadTokenException
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import org.quantumbadger.redreader.BuildConfig
-import org.quantumbadger.redreader.R
+import dev.steenbakker.wearreader.BuildConfig
+import dev.steenbakker.wearreader.R
 import org.quantumbadger.redreader.cache.CacheRequest
 import org.quantumbadger.redreader.cache.CacheRequest.RequestFailureType
 import org.quantumbadger.redreader.common.AndroidCommon.runOnUiThread

@@ -18,7 +18,7 @@ package org.quantumbadger.redreader.common
 
 import android.content.Context
 import android.util.Log
-import org.quantumbadger.redreader.R
+import dev.steenbakker.wearreader.R
 import org.quantumbadger.redreader.activities.BaseActivity
 import org.quantumbadger.redreader.activities.BugReportActivity
 import org.quantumbadger.redreader.common.AndroidCommon.runOnUiThread

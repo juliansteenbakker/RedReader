@@ -32,7 +32,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 
 public class ScrollbarRecyclerViewManager {
 

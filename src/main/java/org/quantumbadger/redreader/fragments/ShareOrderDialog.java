@@ -28,7 +28,7 @@ import android.widget.ListView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatDialogFragment;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.adapters.ShareOrderAdapter;
 import org.quantumbadger.redreader.adapters.ShareOrderCallbackListener;
 import org.quantumbadger.redreader.common.General;

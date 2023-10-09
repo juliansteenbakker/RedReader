@@ -27,7 +27,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.TooltipCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.apache.commons.text.StringEscapeUtils
-import org.quantumbadger.redreader.R
+import dev.steenbakker.wearreader.R
 import org.quantumbadger.redreader.account.RedditAccountManager
 import org.quantumbadger.redreader.activities.*
 import org.quantumbadger.redreader.cache.CacheManager

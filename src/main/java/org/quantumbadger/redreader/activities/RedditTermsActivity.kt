@@ -24,7 +24,7 @@ import android.os.Bundle
 import androidx.annotation.IdRes
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
-import org.quantumbadger.redreader.R
+import dev.steenbakker.wearreader.R
 import org.quantumbadger.redreader.common.LinkHandler
 import org.quantumbadger.redreader.common.PrefsUtility
 

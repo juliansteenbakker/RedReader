@@ -20,7 +20,7 @@ package org.quantumbadger.redreader.viewholders;
 import android.view.View;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.textview.MaterialTextView;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 
 /**
  * A view holder for a one line, text only list item.

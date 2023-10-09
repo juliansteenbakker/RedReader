@@ -20,7 +20,7 @@ package org.quantumbadger.redreader.image;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Environment;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.activities.BaseActivity;
 import org.quantumbadger.redreader.cache.CacheRequest;
 import org.quantumbadger.redreader.common.FileUtils;

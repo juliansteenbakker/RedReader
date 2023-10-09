@@ -35,7 +35,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.account.RedditAccountManager;
 import org.quantumbadger.redreader.activities.OptionsMenuUtility;
@@ -749,7 +749,7 @@ public class MainMenuListingManager {
 				= PrefsUtility.pref_menus_subreddit_context_items();
 
 			if(itemPref.isEmpty()) {
-				return true;
+				return;
 			}
 			final ArrayList<SubredditMenuItem> menu = new ArrayList<>();
 //			if(itemPref.contains(SubredditAction.COPY_URL)) {

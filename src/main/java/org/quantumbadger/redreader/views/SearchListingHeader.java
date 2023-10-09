@@ -27,7 +27,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import org.apache.commons.lang3.StringUtils;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.activities.PostListingActivity;
 import org.quantumbadger.redreader.reddit.url.SearchPostListURL;
 

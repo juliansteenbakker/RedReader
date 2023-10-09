@@ -7,7 +7,7 @@ buildscript {
 	}
 	dependencies {
 		// TODO share this with the "plugins" block
-		val rrKotlinVersion = "1.6.21"
+		val rrKotlinVersion = "1.8.0"
 
 		classpath("com.android.tools.build:gradle:7.3.1")
 		classpath(kotlin("gradle-plugin", version = rrKotlinVersion))
@@ -17,9 +17,15 @@ buildscript {
 
 plugins {
 	id("com.android.application") version("7.3.1") apply(true)
-	kotlin("android") version("1.6.21") apply(true)
-	kotlin("plugin.serialization") version("1.6.21") apply(true)
-	kotlin("plugin.parcelize") version("1.6.21") apply(true)
+	kotlin("android") version("1.8.0") apply(true)
+	kotlin("plugin.serialization") version("1.8.0") apply(true)
+	kotlin("plugin.parcelize") version("1.8.0") apply(true)
+
+	// Make sure that you have the Google services Gradle plugin dependency
+	id("com.google.gms.google-services") version "4.4.0" apply false
+
+	// Add the dependency for the Crashlytics Gradle plugin
+	id("com.google.firebase.crashlytics") version "2.9.9" apply false
     pmd
 	checkstyle
 }
@@ -34,7 +40,7 @@ dependencies {
 	coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.2.2")
 	implementation("androidx.core:core-ktx:1.9.0")
 	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
-	implementation("org.jetbrains.kotlin:kotlin-reflect:1.6.21") // TODO use constant
+	implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.0") // TODO use constant
 	implementation("androidx.annotation:annotation:1.5.0")
 	implementation("androidx.appcompat:appcompat:1.6.0")
 	implementation("androidx.recyclerview:recyclerview:1.2.1")
@@ -56,22 +62,34 @@ dependencies {
 	implementation("com.google.android.exoplayer:exoplayer-ui:2.19.0")
 	implementation("com.github.luben:zstd-jni:1.5.1-1@aar")
 
+	implementation("androidx.wear:wear:1.2.0")
+	implementation("com.google.android.support:wearable:2.9.0")
+	compileOnly("com.google.android.wearable:wearable:2.9.0")
+
 	testImplementation("junit:junit:4.13.2")
 
 	androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 	androidTestImplementation("androidx.test:rules:1.5.0")
 	androidTestImplementation("androidx.test.espresso:espresso-contrib:3.5.1")
+
+	// Import the BoM for the Firebase platform
+	implementation(platform("com.google.firebase:firebase-bom:32.3.1"))
+
+	// Add the dependencies for the Crashlytics and Analytics libraries
+	// When using the BoM, you don't specify versions in Firebase library dependencies
+	implementation("com.google.firebase:firebase-crashlytics-ktx")
+	implementation("com.google.firebase:firebase-analytics-ktx")
 }
 
 android {
 	compileSdk = 33
 	buildToolsVersion = "33.0.1"
 	ndkVersion = "23.1.7779620"
-	namespace = "org.quantumbadger.redreader"
+	namespace = "dev.steenbakker.wearreader"
 
 	defaultConfig {
-		applicationId = "org.quantumbadger.redreader"
-		minSdk = 16
+		applicationId = "dev.steenbakker.wearreader"
+		minSdk = 23
 		targetSdk = 33
 		versionCode = 108
 		versionName = "1.22"

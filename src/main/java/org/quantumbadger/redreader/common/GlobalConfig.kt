@@ -18,7 +18,7 @@
 package org.quantumbadger.redreader.common
 
 import androidx.annotation.Keep
-import org.quantumbadger.redreader.BuildConfig
+import dev.steenbakker.wearreader.BuildConfig
 
 object GlobalConfig {
 	@JvmField @Keep var appName = BuildConfig.APPLICATION_ID

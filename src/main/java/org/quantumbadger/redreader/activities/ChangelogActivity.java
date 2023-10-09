@@ -23,7 +23,7 @@ import android.os.Bundle;
 import android.view.MenuItem;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import org.quantumbadger.redreader.R;
+import dev.steenbakker.wearreader.R;
 import org.quantumbadger.redreader.common.ChangelogManager;
 import org.quantumbadger.redreader.common.PrefsUtility;
 
