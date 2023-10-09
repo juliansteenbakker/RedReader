@@ -17,16 +17,15 @@
 
 package org.quantumbadger.redreader.reddit.api
 
-import android.app.AlertDialog
 import android.content.*
 import android.graphics.Color
-import android.net.Uri
 import android.view.LayoutInflater
 import android.widget.ImageButton
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.TooltipCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.apache.commons.text.StringEscapeUtils
 import org.quantumbadger.redreader.R
 import org.quantumbadger.redreader.account.RedditAccountManager
@@ -36,7 +35,6 @@ import org.quantumbadger.redreader.common.*
 import org.quantumbadger.redreader.common.PrefsUtility.PostFlingAction
 import org.quantumbadger.redreader.common.time.TimestampUTC
 import org.quantumbadger.redreader.fragments.PostPropertiesDialog
-import org.quantumbadger.redreader.fragments.ShareOrderDialog
 import org.quantumbadger.redreader.reddit.APIResponseHandler.ActionResponseHandler
 import org.quantumbadger.redreader.reddit.RedditAPI
 import org.quantumbadger.redreader.reddit.RedditAPI.RedditAction
@@ -65,7 +63,7 @@ object RedditPostActions {
 		EDIT(R.string.action_edit),
 		DELETE(R.string.action_delete),
 		REPORT(R.string.action_report),
-		SHARE(R.string.action_share),
+		SHARE(R.string.action_share_link),
 		REPLY(R.string.action_reply),
 		USER_PROFILE(R.string.action_user_profile),
 		EXTERNAL(R.string.action_external),
@@ -182,7 +180,7 @@ object RedditPostActions {
 
 					PostFlingAction.SHARE -> ActionDescriptionPair(
 						Action.SHARE,
-						R.string.action_share
+						R.string.action_share_link
 					)
 
 					PostFlingAction.SHARE_COMMENTS -> ActionDescriptionPair(
@@ -331,7 +329,7 @@ object RedditPostActions {
 				activity.startActivity(editIntent)
 			}
 
-			Action.DELETE -> AlertDialog.Builder(activity)
+			Action.DELETE -> MaterialAlertDialogBuilder(activity)
 				.setTitle(R.string.accounts_delete)
 				.setMessage(R.string.delete_confirm)
 				.setPositiveButton(
@@ -340,7 +338,7 @@ object RedditPostActions {
 				.setNegativeButton(R.string.dialog_cancel, null)
 				.show()
 
-			Action.REPORT -> AlertDialog.Builder(activity)
+			Action.REPORT -> MaterialAlertDialogBuilder(activity)
 				.setTitle(R.string.action_report)
 				.setMessage(R.string.action_report_sure)
 				.setPositiveButton(
@@ -357,7 +355,7 @@ object RedditPostActions {
 						return
 					}
 					val intent = Intent(Intent.ACTION_VIEW)
-					intent.data = Uri.parse(url)
+					intent.data = LinkHandler.convertAndNormalizeUri(url)
 					activity.startActivity(intent)
 				} catch (e: ActivityNotFoundException) {
 					General.quickToast(
@@ -378,7 +376,7 @@ object RedditPostActions {
 					General.quickToast(activity, R.string.error_toast_no_urls_in_self)
 				} else {
 					val linksArr = linksInComment.toTypedArray()
-					val builder = AlertDialog.Builder(activity)
+					val builder = MaterialAlertDialogBuilder(activity)
 					builder.setItems(linksArr) { dialog: DialogInterface, which: Int ->
 						LinkHandler.onLinkClicked(
 							activity,
@@ -401,53 +399,31 @@ object RedditPostActions {
 
 			Action.SHARE -> {
 				val subject =
-					if (PrefsUtility.pref_behaviour_sharing_dialog()) post.src.title else null
-				LinkHandler.shareText(
-					activity,
-					subject,
-					post.src.url
-				)
+					if (PrefsUtility.pref_behaviour_sharing_include_desc()) post.src.title else null
+				val body = LinkHandler.getPreferredRedditUriString(post.src.url)
+
+				LinkHandler.shareText(activity, subject, body)
 			}
 
 			Action.SHARE_COMMENTS -> {
-				val shareAsPermalink = PrefsUtility.pref_behaviour_share_permalink()
-				val mailer = Intent(Intent.ACTION_SEND)
-				mailer.type = "text/plain"
-				if (PrefsUtility.pref_behaviour_sharing_include_desc()) {
-					mailer.putExtra(
-						Intent.EXTRA_SUBJECT, String.format(
-							activity.getText(R.string.share_comments_for)
-								.toString(), post.src.title
-						)
-					)
-				}
-				if (shareAsPermalink) {
-					mailer.putExtra(
-						Intent.EXTRA_TEXT,
-						Constants.Reddit.getNonAPIUri(post.src.permalink)
-							.toString()
-					)
+				val subject = if (PrefsUtility.pref_behaviour_sharing_include_desc()) {
+					String.format(activity.getText(R.string.share_comments_for)
+							.toString(), post.src.title)
 				} else {
-					mailer.putExtra(
-						Intent.EXTRA_TEXT,
-						Constants.Reddit.getNonAPIUri(
-							Constants.Reddit.PATH_COMMENTS
-									+ post.src.idAlone
-						)
-							.toString()
-					)
+					null
 				}
-				if (PrefsUtility.pref_behaviour_sharing_dialog()) {
-					ShareOrderDialog.newInstance(mailer)
-						.show(activity.supportFragmentManager, null)
+
+				var body = if (PrefsUtility.pref_behaviour_share_permalink()) {
+					Constants.Reddit.getNonAPIUri(post.src.permalink).toString()
 				} else {
-					activity.startActivity(
-						Intent.createChooser(
-							mailer,
-							activity.getString(R.string.action_share)
-						)
-					)
+					Constants.Reddit.getNonAPIUri(
+							Constants.Reddit.PATH_COMMENTS + post.src.idAlone)
+							.toString()
 				}
+
+				body = LinkHandler.getPreferredRedditUriString(body)
+
+				LinkHandler.shareText(activity, subject, body)
 			}
 
 			Action.SHARE_IMAGE -> {
@@ -826,7 +802,7 @@ object RedditPostActions {
 			menu.add(
 				RPVMenuItem(
 					activity,
-					R.string.action_share,
+					R.string.action_share_link,
 					if (isRedditVideo) Action.SHARE_COMMENTS else Action.SHARE
 				)
 			)
@@ -883,7 +859,7 @@ object RedditPostActions {
 		for (i in menuText.indices) {
 			menuText[i] = menu[i].title
 		}
-		val builder = AlertDialog.Builder(activity)
+		val builder = MaterialAlertDialogBuilder(activity)
 		builder.setItems(menuText) { _: DialogInterface?, which: Int ->
 			onActionMenuItemSelected(
 				post,

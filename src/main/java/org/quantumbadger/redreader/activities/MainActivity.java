@@ -17,7 +17,6 @@
 
 package org.quantumbadger.redreader.activities;
 
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
@@ -36,6 +35,8 @@ import android.widget.FrameLayout;
 import android.widget.Spinner;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.RedReader;
@@ -169,21 +170,15 @@ public class MainActivity extends RefreshableActivity
 		Log.i(TAG, "[Migration] App version: " + appVersion);
 
 // TODO: Not supported
-
-//		if(!sharedPreferences.contains(FeatureFlagHandler.PREF_FIRST_RUN_MESSAGE_SHOWN)) {
-//
-//			Log.i(TAG, "[Migration] Showing first run message");
 //
 //			FeatureFlagHandler.handleFirstInstall(sharedPreferences);
 //
-//			new AlertDialog.Builder(this)
+//			new MaterialAlertDialogBuilder(this)
 //					.setTitle(R.string.firstrun_login_title)
 //					.setMessage(R.string.firstrun_login_message)
 //					.setPositiveButton(
 //							R.string.firstrun_login_button_now,
-//							(dialog, which) -> new AccountListDialog().show(
-//									this.getSupportFragmentManager(),
-//									null))
+//							(dialog, which) -> AccountListDialog.show(this))
 //					.setNegativeButton(R.string.firstrun_login_button_later, null)
 //					.show();
 //
@@ -193,7 +188,7 @@ public class MainActivity extends RefreshableActivity
 //					.apply();
 //
 //		} else if(sharedPreferences.contains(FeatureFlagHandler.PREF_LAST_VERSION)) {
-//			FeatureFlagHandler.handleLegacyUpgrade(this, appVersion, pInfo.versionName);
+//			FeatureFlagHandler.handleLegacyUpgrade(this, appVersion, pInfo.getVersionName());
 //
 //		} else {
 //			Log.i(TAG, "[Migration] Last version not set.");
@@ -313,7 +308,9 @@ public class MainActivity extends RefreshableActivity
 
 			case MainMenuFragment.MENU_MENU_ACTION_CUSTOM: {
 
-				final AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
+				final MaterialAlertDialogBuilder alertBuilder
+						= new MaterialAlertDialogBuilder(this);
+
 				final View root = getLayoutInflater().inflate(
 						R.layout.dialog_mainmenu_custom,
 						null);
@@ -447,7 +444,8 @@ public class MainActivity extends RefreshableActivity
 
 				final AlertDialog alertDialog = alertBuilder.create();
 				alertDialog.getWindow()
-						.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+						.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE
+								| WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
 				alertDialog.show();
 
 				break;

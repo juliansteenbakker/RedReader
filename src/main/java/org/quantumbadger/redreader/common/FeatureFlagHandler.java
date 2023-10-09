@@ -17,12 +17,12 @@
 
 package org.quantumbadger.redreader.common;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.activities.BaseActivity;
 import org.quantumbadger.redreader.cache.CacheManager;
@@ -50,7 +50,8 @@ public final class FeatureFlagHandler {
 		CONTROVERSIAL_DATE_SORTS_FEATURE("controversialDateSortsFeature"),
 		HIDE_STATUS_BAR_FOR_MEDIA_FEATURE("hideStatusBarForMediaFeature"),
 		REPLY_IN_POST_ACTION_MENU_FEATURE("replyInPostActionMenuFeature"),
-		MAIN_MENU_FIND_SUBREDDIT_FEATURE("mainMenuFindSubreddit");
+		MAIN_MENU_FIND_SUBREDDIT_FEATURE("mainMenuFindSubreddit"),
+		OPEN_COMMENT_EXTERNALLY_FEATURE("openCommentExternallyFeature");
 
 		@NonNull private final String id;
 
@@ -243,6 +244,26 @@ public final class FeatureFlagHandler {
 						context.getString(R.string.pref_menus_mainmenu_shortcutitems_key),
 						existingShortcutPreferences).apply();
 			}
+
+			if(getAndSetFeatureFlag(prefs, FeatureFlag.OPEN_COMMENT_EXTERNALLY_FEATURE)
+					== FeatureFlagStatus.UPGRADE_NEEDED) {
+
+				Log.i(TAG, "Upgrading, add external browser option to comment action menu.");
+
+				final Set<String> existingCommentActionMenuItems = getStringSet(
+						R.string.pref_menus_comment_context_items_key,
+						R.array.pref_menus_comment_context_items_return,
+						context,
+						prefs);
+
+				existingCommentActionMenuItems.add("external");
+
+				prefs.edit()
+						.putStringSet(
+								context.getString(R.string.pref_menus_comment_context_items_key),
+								existingCommentActionMenuItems)
+						.apply();
+			}
 		});
 	}
 
@@ -293,7 +314,7 @@ public final class FeatureFlagHandler {
 		if(lastVersion < 63) {
 			// Upgrading across the 1.9.0 boundary (when oAuth was introduced)
 
-			new AlertDialog.Builder(activity)
+			new MaterialAlertDialogBuilder(activity)
 					.setTitle(R.string.firstrun_login_title)
 					.setMessage(R.string.upgrade_v190_login_message)
 					.setPositiveButton(

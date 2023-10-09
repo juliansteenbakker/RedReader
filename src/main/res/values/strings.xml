@@ -828,7 +828,7 @@
 
 	<!-- 2016-07-29 -->
 	<string name="pref_appearance_navbar_color_key" translatable="false">pref_appearance_navbar_color</string>
-	<string name="pref_appearance_navbar_color_title">Navigation and status bar colour</string>
+	<string name="pref_appearance_navbar_color_title">Navigation bar colour</string>
 
 	<string name="pref_appearance_navbar_color_option_black">Black</string>
 	<string name="pref_appearance_navbar_color_option_primary">Primary (light)</string>
@@ -1770,5 +1770,35 @@
 	<string name="pref_appearance_user_header">User Profiles</string>
 	<string name="pref_appearance_user_show_avatars_title">Show avatars</string>
 	<string name="pref_appearance_user_show_avatars_key">pref_appearance_user_show_avatars</string>
+
+	<!-- 2023-07-10 -->
+	<string name="pref_behaviour_sharing_domain_key">pref_behaviour_sharing_domain</string>
+	<string name="pref_behaviour_sharing_domain_title">Share as domain</string>
+	<string name="pref_behaviour_sharing_domain_standard_reddit">reddit.com</string>
+	<string name="pref_behaviour_sharing_domain_short_reddit">redd.it (for posts)</string>
+	<string name="pref_behaviour_sharing_domain_old_reddit">old.reddit.com</string>
+	<string name="pref_behaviour_sharing_domain_new_reddit">new.reddit.com</string>
+	<string name="pref_behaviour_sharing_domain_np_reddit">np.reddit.com</string>
+	<string name="action_share_link">Share Link</string>
+
+	<!-- 2023-10-01 -->
+	<string name="post_submit_as_user">User</string>
+	<string name="post_submit_type">Post Type</string>
+	<string name="post_submit_flair">Flair</string>
+
+	<!-- 2023-10-07 -->
+	<string name="user_profile_account_age">User for %s</string>
+	<string name="userprofile_tag_moderator">Moderator</string>
+	<string name="userprofile_tag_admin">Site Admin</string>
+	<string name="userprofile_tag_gold">Gold</string>
+	<string name="userprofile_posts">Posts</string>
+	<string name="userprofile_comments">Comments</string>
+	<string name="userprofile_accessibility_karma">Karma: %d</string>
+	<string name="userprofile_send_message">Send message</string>
+	<string name="userprofile_tag_friend">Friend</string>
+	<string name="userprofile_tag_you">You</string>
+	<string name="userprofile_button_more_info">More info</string>
+
+	<string name="props_id">ID</string>
 
 </resources>

@@ -17,14 +17,17 @@
 
 package org.quantumbadger.redreader.reddit.api;
 
-import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.account.RedditAccount;
 import org.quantumbadger.redreader.account.RedditAccountManager;
@@ -69,6 +72,7 @@ public class RedditAPICommentAction {
 		COLLAPSE,
 //		EDIT,
 //		DELETE,
+//		EXTERNAL,
 		PROPERTIES,
 //		CONTEXT,
 		GO_TO_COMMENT,
@@ -121,7 +125,7 @@ public class RedditAPICommentAction {
 //			if(!isArchived) {
 //
 //				if(itemPref.contains(RedditCommentAction.UPVOTE)) {
-//					if(!changeDataManager.isUpvoted(comment)) {
+//					if(!changeDataManager.isUpvoted(comment.getIdAndType())) {
 //						menu.add(new RCVMenuItem(
 //								activity,
 //								R.string.action_upvote,
@@ -135,7 +139,7 @@ public class RedditAPICommentAction {
 //				}
 //
 //				if(itemPref.contains(RedditCommentAction.DOWNVOTE)) {
-//					if(!changeDataManager.isDownvoted(comment)) {
+//					if(!changeDataManager.isDownvoted(comment.getIdAndType())) {
 //						menu.add(new RCVMenuItem(
 //								activity,
 //								R.string.action_downvote,
@@ -150,7 +154,7 @@ public class RedditAPICommentAction {
 //			}
 //
 //			if(itemPref.contains(RedditCommentAction.SAVE)) {
-//				if(changeDataManager.isSaved(comment)) {
+//				if(changeDataManager.isSaved(comment.getIdAndType())) {
 //					menu.add(new RCVMenuItem(
 //							activity,
 //							R.string.action_unsave,
@@ -180,7 +184,7 @@ public class RedditAPICommentAction {
 //			}
 //
 //			if(user.username.equalsIgnoreCase(comment.getParsedComment()
-//					.getRawComment().author)) {
+//					.getRawComment().getAuthor().getDecoded())) {
 //				if(itemPref.contains(RedditCommentAction.EDIT) && !isArchived) {
 //					menu.add(new RCVMenuItem(
 //							activity,
@@ -197,12 +201,20 @@ public class RedditAPICommentAction {
 //			}
 //		}
 //
-//		if(itemPref.contains(RedditCommentAction.CONTEXT)) {
+//		if(itemPref.contains(RedditCommentAction.EXTERNAL)) {
 //			menu.add(new RCVMenuItem(
 //					activity,
-//					R.string.action_comment_context,
-//					RedditCommentAction.CONTEXT));
+//					R.string.action_external,
+//					RedditCommentAction.EXTERNAL
+//			));
 //		}
+
+		if(itemPref.contains(RedditCommentAction.CONTEXT)) {
+			menu.add(new RCVMenuItem(
+					activity,
+					R.string.action_comment_context,
+					RedditCommentAction.CONTEXT));
+		}
 
 		if(itemPref.contains(RedditCommentAction.GO_TO_COMMENT)) {
 			menu.add(new RCVMenuItem(
@@ -268,7 +280,7 @@ public class RedditAPICommentAction {
 			menuText[i] = menu.get(i).title;
 		}
 
-		final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+		final MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(activity);
 
 		builder.setItems(menuText, (dialog, which) -> onActionMenuItemSelected(
 				comment,
@@ -322,7 +334,7 @@ public class RedditAPICommentAction {
 //
 //			case REPORT:
 //
-//				new AlertDialog.Builder(activity)
+//				new MaterialAlertDialogBuilder(activity)
 //						.setTitle(R.string.action_report)
 //						.setMessage(R.string.action_report_sure)
 //						.setPositiveButton(
@@ -338,10 +350,10 @@ public class RedditAPICommentAction {
 //				break;
 //
 //			case REPLY: {
-//				if(comment.isArchived()) {
+//				if(comment.getArchived()) {
 //					General.quickToast(activity, R.string.error_archived_reply, Toast.LENGTH_SHORT);
 //					break;
-//				} else if((comment.isLocked() || postLocked) && !comment.canModerate()) {
+//				} else if((comment.getLocked() || postLocked) && !comment.getCan_mod_post()) {
 //					General.quickToast(activity, R.string.error_locked_reply, Toast.LENGTH_SHORT);
 //					break;
 //				}
@@ -352,7 +364,7 @@ public class RedditAPICommentAction {
 //						comment.getIdAndType());
 //				intent.putExtra(
 //						CommentReplyActivity.PARENT_MARKDOWN_KEY,
-//						StringEscapeUtils.unescapeHtml4(comment.body));
+//						comment.getBody().getDecoded());
 //				activity.startActivity(intent);
 //				break;
 //			}
@@ -362,13 +374,13 @@ public class RedditAPICommentAction {
 //				intent.putExtra("commentIdAndType", comment.getIdAndType());
 //				intent.putExtra(
 //						"commentText",
-//						StringEscapeUtils.unescapeHtml4(comment.body));
+//						comment.getBody().getDecoded());
 //				activity.startActivity(intent);
 //				break;
 //			}
 //
 //			case DELETE: {
-//				new AlertDialog.Builder(activity)
+//				new MaterialAlertDialogBuilder(activity)
 //						.setTitle(R.string.accounts_delete)
 //						.setMessage(R.string.delete_confirm)
 //						.setPositiveButton(
@@ -383,8 +395,26 @@ public class RedditAPICommentAction {
 //				break;
 //			}
 //
+//			case EXTERNAL: {
+//				try {
+//					final String url
+//							= comment.getContextUrl().context(null).generateNonJsonUri().toString();
+//
+//					final Intent intent = new Intent(Intent.ACTION_VIEW);
+//					intent.setData(Uri.parse(url));
+//					activity.startActivity(intent);
+//				} catch(final ActivityNotFoundException e) {
+//					General.quickToast(
+//							activity,
+//							R.string.action_not_handled_by_installed_app_toast
+//					);
+//				}
+//
+//				break;
+//			}
+//
 //			case COMMENT_LINKS:
-//				final HashSet<String> linksInComment = comment.computeAllLinks();
+//				final Set<String> linksInComment = comment.computeAllLinks();
 //
 //				if(linksInComment.isEmpty()) {
 //					General.quickToast(activity, R.string.error_toast_no_urls_in_comment);
@@ -394,7 +424,9 @@ public class RedditAPICommentAction {
 //					final String[] linksArr =
 //							linksInComment.toArray(new String[0]);
 //
-//					final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+//					final MaterialAlertDialogBuilder builder
+//							= new MaterialAlertDialogBuilder(activity);
+//
 //					builder.setItems(linksArr, (dialog, which) -> {
 //						LinkHandler.onLinkClicked(activity, linksArr[which], false);
 //						dialog.dismiss();
@@ -418,16 +450,17 @@ public class RedditAPICommentAction {
 //							Locale.US,
 //							activity.getText(R.string.share_comment_by_on_reddit)
 //									.toString(),
-//							comment.author);
+//							comment.getAuthor().getDecoded());
 //				}
 //
 //				// TODO this currently just dumps the markdown (only if sharing text is enabled)
 //				if(PrefsUtility.pref_behaviour_sharing_share_text()) {
-//					body = StringEscapeUtils.unescapeHtml4(comment.body)
+//					body = comment.getBody().getDecoded()
 //							+ "\r\n\r\n";
 //				}
 //
-//				body += comment.getContextUrl().generateNonJsonUri().toString();
+//				body += LinkHandler.getPreferredRedditUriString(
+//						comment.getContextUrl().generateNonJsonUri().toString());
 //
 //				LinkHandler.shareText(activity, subject, body);
 //				break;

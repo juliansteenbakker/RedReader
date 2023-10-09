@@ -18,13 +18,16 @@
 
 <resources>
 	
-    <style name="RR.Dark" parent="Theme.MaterialComponents.NoActionBar">
+    <style name="RR.Dark" parent="Theme.Material3.Dark.NoActionBar">
 
         <item name="android:actionOverflowButtonStyle">@style/RR.Base.Widget.AppCompat.ActionButton.Overflow</item>
 
         <item name="colorPrimary">#CCCCCC</item>
         <item name="colorPrimaryDark">#000000</item>
+		<item name="colorOnPrimary">#000000</item>
+
         <item name="colorAccent">#99DDDD</item>
+
 		<item name="rrActionBarCol">#222222</item>
 
 		<item name="rrPostListHeaderBackgroundCol">#323232</item>
@@ -52,8 +55,8 @@
         <item name="rrLoadingRingForegroundCol">#C8C8C8</item>
         <item name="rrLoadingRingBackgroundCol">#323232</item>
 
-        <item name="alertDialogTheme">@style/Theme.MaterialComponents.Dialog.Alert</item>
-		<item name="rrActionBarPopupThemeStyle">@style/ThemeOverlay.MaterialComponents.Dark</item>
+        <item name="alertDialogTheme">@style/Theme.Material3.Dark.Dialog.Alert</item>
+		<item name="rrActionBarPopupThemeStyle">@style/ThemeOverlay.Material3.Dark</item>
 
 		<item name="actionBarSize">48dp</item>
 
@@ -119,6 +122,7 @@
         <item name="rrIconTime">@drawable/ic_time_dark</item>
         <item name="rrIconForward">@drawable/ic_action_forward_dark</item>
 		<item name="rrIconOverflow">@drawable/dots_vertical_dark</item>
+		<item name="rrIconArrowUpSmall">@drawable/arrow_up_small_dark</item>
 		<item name="rrIconArrowUpBold">@drawable/arrow_up_bold_dark</item>
 		<item name="rrIconArrowDownBold">@drawable/arrow_down_bold_dark</item>
 		<item name="rrIconStarFilledOff">@drawable/star_off_dark</item>
@@ -164,7 +168,7 @@
 		<item name="rrLoadingRingForegroundCol">#AAAAAA</item>
 		<item name="rrLoadingRingBackgroundCol">#323232</item>
 
-		<item name="rrActionBarPopupThemeStyle">@style/ThemeOverlay.MaterialComponents.Dark</item>
+		<item name="rrActionBarPopupThemeStyle">@style/ThemeOverlay.Material3.Dark</item>
 
 		<item name="actionBarSize">48dp</item>
 
@@ -232,7 +236,7 @@
 		<item name="rrLoadingRingForegroundCol">#C8C8C8</item>
 		<item name="rrLoadingRingBackgroundCol">#000000</item>
 
-		<item name="rrActionBarPopupThemeStyle">@style/ThemeOverlay.MaterialComponents.Dark</item>
+		<item name="rrActionBarPopupThemeStyle">@style/ThemeOverlay.Material3.Dark</item>
 
 		<item name="actionBarSize">48dp</item>
 
@@ -268,10 +272,13 @@
 
 	</style>
 
-	<style name="RR.Settings" parent="Theme.MaterialComponents.NoActionBar">
+	<style name="RR.Settings" parent="Theme.Material3.Dark.NoActionBar">
 
 		<item name="colorPrimary">#CCCCCC</item>
 		<item name="colorPrimaryDark">#555555</item>
+
+		<item name="colorOnPrimary">#000000</item>
+
 		<item name="colorAccent">#99DDDD</item>
 		<item name="rrActionBarCol">#555555</item>
 		<item name="android:windowBackground">@color/settingsWindowBackground</item>
@@ -280,14 +287,27 @@
     <style name="RR.Startup" parent="RR.Dark">
     </style>
 
-    <style name="RR.Light.DarkActionBar" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="RR.Light.DarkActionBar" parent="Theme.Material3.Light.NoActionBar">
 
         <item name="android:actionOverflowButtonStyle">@style/RR.Base.Widget.AppCompat.ActionButton.Overflow</item>
 
         <item name="colorPrimary">#222222</item>
         <item name="colorPrimaryDark">#111111</item>
+		<item name="colorOnPrimary">#FFFFFF</item>
         <item name="colorAccent">?colorPrimaryDark</item>
 		<item name="rrActionBarCol">?colorPrimary</item>
+
+		<item name="elevationOverlayEnabled">false</item>
+		<item name="colorSurface">#FFFFFF</item>
+		<item name="colorSurfaceBright">#FFFFFF</item>
+		<item name="colorSurfaceContainer">#FFFFFF</item>
+		<item name="colorSurfaceContainerHigh">#FFFFFF</item>
+		<item name="colorSurfaceContainerHighest">#FFFFFF</item>
+		<item name="colorSurfaceContainerLow">#FFFFFF</item>
+		<item name="colorSurfaceContainerLowest">#FFFFFF</item>
+		<item name="colorSurfaceDim">#FFFFFF</item>
+		<item name="colorSurfaceVariant">#F2F2F2</item>
+		<item name="colorBackgroundFloating">#FFFFFF</item>
 
 		<item name="rrPostListHeaderBackgroundCol">#323232</item>
 
@@ -310,8 +330,8 @@
         <item name="rrListItemBackgroundHighlightCol">#DDDDDD</item>
         <item name="rrListBackgroundCol">#F5F5F5</item>
 
-        <item name="alertDialogTheme">@style/Theme.MaterialComponents.Light.Dialog.Alert</item>
-		<item name="rrActionBarPopupThemeStyle">@style/ThemeOverlay.MaterialComponents.Light</item>
+        <item name="alertDialogTheme">@style/Theme.Material3.Light.Dialog.Alert</item>
+		<item name="rrActionBarPopupThemeStyle">@style/ThemeOverlay.Material3.Light</item>
 
         <item name="rrListDividerCol">#CCCCCC</item>
         <item name="rrListHeaderTextCol">?colorAccent</item>
@@ -384,6 +404,7 @@
         <item name="rrIconTime">@drawable/ic_time_light</item>
         <item name="rrIconForward">@drawable/ic_action_forward_light</item>
 		<item name="rrIconOverflow">@drawable/dots_vertical_light</item>
+		<item name="rrIconArrowUpSmall">@drawable/arrow_up_small_light</item>
 		<item name="rrIconArrowUpBold">@drawable/arrow_up_bold_light</item>
 		<item name="rrIconArrowDownBold">@drawable/arrow_down_bold_light</item>
 		<item name="rrIconStarFilledOff">@drawable/star_off_light</item>

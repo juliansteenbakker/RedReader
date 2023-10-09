@@ -17,7 +17,6 @@
 
 package org.quantumbadger.redreader.settings;
 
-import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -28,6 +27,7 @@ import android.text.Html;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.annotation.StringRes;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.FragmentActivity;
 import androidx.preference.CheckBoxPreference;
 import androidx.preference.EditTextPreference;
@@ -36,6 +36,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceScreen;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.quantumbadger.redreader.BuildConfig;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.RedReader;
@@ -173,7 +174,8 @@ public final class SettingsFragment extends PreferenceFragmentCompat {
 				R.string.pref_images_high_res_thumbnails_key,
 				R.string.pref_accessibility_min_comment_height_key,
 				R.string.pref_appearance_android_status_key,
-				R.string.pref_behaviour_collapse_sticky_comments_key
+				R.string.pref_behaviour_collapse_sticky_comments_key,
+				R.string.pref_behaviour_sharing_domain_key
 		};
 
 		final int[] editTextPrefsToUpdate = {
@@ -462,6 +464,22 @@ public final class SettingsFragment extends PreferenceFragmentCompat {
 		}
 
 		{
+			final ListPreference sharingDomainPref = findPreference(
+					getString(R.string.pref_behaviour_sharing_domain_key));
+			final Preference shareAsPermalinkPref = findPreference(
+					getString(R.string.pref_behaviour_share_permalink_key));
+
+			if(sharingDomainPref != null) {
+				sharingDomainPref.setOnPreferenceChangeListener((preference, newValue) -> {
+					final int index = sharingDomainPref.findIndexOfValue((String)newValue);
+					sharingDomainPref.setSummary(sharingDomainPref.getEntries()[index]);
+					shareAsPermalinkPref.setEnabled(!newValue.equals("short_reddit"));
+					return true;
+				});
+			}
+		}
+
+		{
 			final CheckBoxPreference hideOnScrollPref
 					= findPreference(getString(
 							R.string.pref_appearance_hide_toolbar_on_scroll_key));
@@ -613,7 +631,7 @@ public final class SettingsFragment extends PreferenceFragmentCompat {
 			choices.add(Html.fromHtml("<small>" + path +
 					" [" + freeSpace + "]</small>"));
 		}
-		new AlertDialog.Builder(context)
+		new MaterialAlertDialogBuilder(context)
 				.setTitle(R.string.pref_cache_location_title)
 				.setSingleChoiceItems(
 						choices.toArray(new CharSequence[0]),
@@ -686,7 +704,7 @@ public final class SettingsFragment extends PreferenceFragmentCompat {
 			cacheItemStrings[cacheType.ordinal()] = getString(cacheType.plainStringRes);
 		}
 
-		final AlertDialog cacheDialog = new AlertDialog.Builder(context)
+		final AlertDialog cacheDialog = new MaterialAlertDialogBuilder(context)
 				.setTitle(R.string.pref_cache_clear_title)
 				.setMultiChoiceItems(cacheItemStrings, null,
 						(dialog, which, isChecked) ->
