@@ -25,7 +25,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import info.guardianproject.netcipher.web.WebkitProxy;
+//import info.guardianproject.netcipher.web.WebkitProxy;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.RedReader;
 import org.quantumbadger.redreader.common.PrefsUtility;
@@ -130,17 +130,17 @@ public class OAuthLoginActivity extends BaseActivity {
 
 		if(TorCommon.isTorEnabled()) {
 			try {
-				final boolean result = WebkitProxy.setProxy(
-						RedReader.class.getCanonicalName(),
-						getApplicationContext(),
-						mWebView,
-						"127.0.0.1",
-						8118);
-				if(!result) {
-					BugReportActivity.handleGlobalError(
-							this,
-							getResources().getString(R.string.error_tor_setting_failed));
-				}
+//				final boolean result = WebkitProxy.setProxy(
+//						RedReader.class.getCanonicalName(),
+//						getApplicationContext(),
+//						mWebView,
+//						"127.0.0.1",
+//						8118);
+//				if(!result) {
+//					BugReportActivity.handleGlobalError(
+//							this,
+//							getResources().getString(R.string.error_tor_setting_failed));
+//				}
 			} catch(final Exception e) {
 				BugReportActivity.handleGlobalError(this, e);
 			}
@@ -157,7 +157,7 @@ public class OAuthLoginActivity extends BaseActivity {
 		settings.setSaveFormData(false);
 		settings.setSavePassword(false);
 		settings.setDatabaseEnabled(false);
-		settings.setAppCacheEnabled(false);
+//		settings.setAppCacheEnabled(false);
 		settings.setDisplayZoomControls(false);
 
 		setTitle(RedditOAuth.getPromptUri().toString());

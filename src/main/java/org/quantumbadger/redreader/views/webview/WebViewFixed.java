@@ -25,7 +25,6 @@ import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
-import info.guardianproject.netcipher.web.WebkitProxy;
 import org.quantumbadger.redreader.R;
 import org.quantumbadger.redreader.RedReader;
 import org.quantumbadger.redreader.activities.BugReportActivity;
@@ -191,17 +190,17 @@ public class WebViewFixed extends WebView {
 		if(TorCommon.isTorEnabled()) {
 			try {
 				clearBrowser();
-				final boolean result = WebkitProxy.setProxy(
-						RedReader.class.getCanonicalName(),
-						context.getApplicationContext(),
-						this,
-						"127.0.0.1",
-						8118);
-				if(!result) {
-					BugReportActivity.handleGlobalError(
-							context,
-							getResources().getString(R.string.error_tor_setting_failed));
-				}
+//				final boolean result = WebkitProxy.setProxy(
+//						RedReader.class.getCanonicalName(),
+//						context.getApplicationContext(),
+//						this,
+//						"127.0.0.1",
+//						8118);
+//				if(!result) {
+//					BugReportActivity.handleGlobalError(
+//							context,
+//							getResources().getString(R.string.error_tor_setting_failed));
+//				}
 			} catch(final Exception e) {
 				BugReportActivity.handleGlobalError(context, e);
 			}
